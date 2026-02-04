@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euman Security Suite - C + Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --border: #2a2a3a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #7c9cff;
+            --accent-dim: #4a6acc;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --error: #f87171;
+            --python: #3572A5;
+            --c-lang: #555555;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+        .lang-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-tertiary);
+            padding: 0.2rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        .lang-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .lang-btn.active { color: white; }
+        .lang-btn.c-lang.active { background: var(--c-lang); }
+        .lang-btn.python.active { background: var(--python); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .panel-header {
+            background: var(--bg-tertiary);
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-content {
+            padding: 0.75rem;
+            max-height: calc(100vh - 180px);
+            overflow-y: auto;
+        }
+        .code-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            resize: vertical;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            background: var(--accent-dim);
+            border: none;
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+        .btn:hover { background: var(--accent); }
+        .copy-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0.2rem 0.5rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            cursor: pointer;
+        }
+        .copy-btn:hover { background: var(--accent); color: var(--bg-primary); }
+        .finding {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.6rem;
+            margin-bottom: 0.5rem;
+        }
+        .finding-header {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.4rem;
+            flex-wrap: wrap;
+        }
+        .finding-gate {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            color: white;
+        }
+        .severity-badge {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+        }
+        .severity-high { background: var(--error); color: white; }
+        .severity-medium { background: var(--warning); color: black; }
+        .severity-low { background: #64748b; color: white; }
+        .finding-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .finding-desc { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
+        .finding-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            background: var(--bg-primary);
+            padding: 0.35rem;
+            border-radius: 3px;
+            color: var(--error);
+            overflow-x: auto;
+            white-space: pre;
+        }
+        .finding-nist { font-size: 0.6rem; color: #60a5fa; margin-top: 0.35rem; }
+        .nist-badge {
+            display: inline-flex;
+            padding: 0.1rem 0.3rem;
+            background: var(--bg-primary);
+            border: 1px solid #60a5fa;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            color: #60a5fa;
+            margin-right: 0.2rem;
+        }
+        .cwe-badge { border-color: #f472b6; color: #f472b6; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .stat-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.5rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        .stat-label { font-size: 0.65rem; color: var(--text-muted); }
+        .prompt-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .prompt-cmd {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            margin-bottom: 0.3rem;
+            word-break: break-all;
+        }
+        .prompt-desc {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+        }
+        @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+        
+        /* Tabs */
+        .tab-nav {
+            display: flex;
+            gap: 0.2rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.4rem;
+        }
+        .tab-btn {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid transparent;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .tab-btn:hover { background: var(--bg-tertiary); }
+        .tab-btn.active { background: var(--bg-tertiary); color: var(--accent); border-color: var(--border); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Composer */
+        .section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin: 0.75rem 0 0.3rem 0;
+        }
+        .section-label:first-child { margin-top: 0; }
+        select, input[type="text"] {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+        select:focus, input:focus { border-color: var(--accent); outline: none; }
+        .command-preview {
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            min-height: 60px;
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+        .command-preview .auth { color: #f472b6; }
+        .command-preview .domain { color: #60a5fa; }
+        .command-preview .op { color: #4ade80; }
+        .command-preview .mech { color: #fbbf24; }
+        .command-preview .placeholder { color: var(--text-muted); }
+        .symbol-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-top: 0.4rem;
+        }
+        .symbol-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 0.2rem 0.45rem;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .symbol-btn:hover { background: var(--accent); color: var(--bg-primary); }
+        .symbol-btn.selected { background: var(--accent-dim); color: white; }
+        .gate-display {
+            display: flex;
+            gap: 0.3rem;
+            margin-top: 0.5rem;
+        }
+        .gate-state {
+            flex: 1;
+            text-align: center;
+            padding: 0.4rem;
+            border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0.4;
+        }
+        .gate-state.active { opacity: 1; }
+        .gate-z { background: #6b7280; color: white; }
+        .gate-x { background: #f59e0b; color: black; }
+        .gate-0 { background: #ef4444; color: white; }
+        .gate-1 { background: #22c55e; color: black; }
+        .quick-cmd {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin-bottom: 0.4rem;
+            cursor: pointer;
+        }
+        .quick-cmd:hover { border-color: var(--accent); }
+        .quick-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+        }
+        .quick-desc {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .grammar-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+        }
+        .grammar-box pre { margin: 0; white-space: pre-wrap; }
+        .ref-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+        }
+        .ref-table th, .ref-table td {
+            padding: 0.4rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .ref-table th {
+            background: var(--bg-tertiary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+        }
+        .gate-ref-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin-bottom: 0.4rem;
+        }
+        .gate-ref-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .gate-ref-desc {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Euman Security Suite <span style="color: var(--text-muted); font-weight: 400;">C + Python</span></h1>
+            <div class="lang-toggle">
+                <button class="lang-btn c-lang active" onclick="setLang('c')">C/C23</button>
+                <button class="lang-btn python" onclick="setLang('python')">Python</button>
+            </div>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--error);" id="stat-high">0</div>
+                <div class="stat-label">HIGH</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--warning);" id="stat-medium">0</div>
+                <div class="stat-label">MEDIUM</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: #64748b;" id="stat-low">0</div>
+                <div class="stat-label">LOW</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--success);" id="stat-gates">0</div>
+                <div class="stat-label">GATES</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="showTab('analyze')">Analyze</button>
+            <button class="tab-btn" onclick="showTab('composer')">ExcLisp Composer</button>
+            <button class="tab-btn" onclick="showTab('reference')">Gate Reference</button>
+        </div>
+
+        <!-- Tab: Analyze -->
+        <div class="tab-content active" id="tab-analyze">
+            <div class="grid">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span id="lang-label">C Source Code</span>
+                        <button class="copy-btn" onclick="pasteCode()">PASTE</button>
+                    </div>
+                    <div class="panel-content">
+                        <textarea class="code-input" id="code-input" placeholder="Paste code here..."></textarea>
+                        <button class="btn" onclick="analyze()">Analyze Security</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        Findings
+                        <span id="finding-count" style="font-size: 0.55rem; color: var(--text-muted);"></span>
+                    </div>
+                    <div class="panel-content" id="results">
+                        <p style="color: var(--text-muted); font-size: 0.75rem;">Enter code and click Analyze.</p>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        AI Prompts
+                        <button class="copy-btn" onclick="copyAllPrompts()">COPY ALL</button>
+                    </div>
+                    <div class="panel-content" id="prompts">
+                        <p style="color: var(--text-muted); font-size: 0.75rem;">Run analysis to generate prompts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: ExcLisp Composer -->
+        <div class="tab-content" id="tab-composer">
+            <div class="grid">
+                <div class="panel">
+                    <div class="panel-header">Component Selection</div>
+                    <div class="panel-content">
+                        <div class="section-label">Authority {AUTH}</div>
+                        <select id="auth-select" onchange="updateCommand()">
+                            <option value="">-- select --</option>
+                            <option value="HUMAN">HUMAN - Developer authority</option>
+                            <option value="AI">AI - Assistant authority</option>
+                            <option value="SYSTEM">SYSTEM - Automated enforcement</option>
+                            <option value="*">* - Universal</option>
+                        </select>
+
+                        <div class="section-label">Domain ::DOMAIN</div>
+                        <select id="domain-select" onchange="updateCommand()">
+                            <option value="">-- select --</option>
+                            <option value="code">code</option>
+                            <option value="security">security</option>
+                            <option value="memory">memory</option>
+                            <option value="bounds">bounds</option>
+                            <option value="overflow">overflow</option>
+                            <option value="type">type</option>
+                            <option value="refcount">refcount</option>
+                            <option value="validation">validation</option>
+                            <option value="injection">injection</option>
+                            <option value="crypto">crypto</option>
+                        </select>
+                        <input type="text" id="domain-custom" placeholder="or custom domain..." oninput="updateCommand()" style="margin-top: 0.3rem;">
+
+                        <div class="section-label">Operation (OP)</div>
+                        <select id="op-select" onchange="updateCommand()">
+                            <option value="">-- select --</option>
+                            <option value="ANALYZE">ANALYZE - Examine for patterns</option>
+                            <option value="PROTECT">PROTECT - Add defensive checks</option>
+                            <option value="VALIDATE">VALIDATE - Verify correctness</option>
+                            <option value="INSTRUMENT">INSTRUMENT - Insert GATE_CHECK</option>
+                            <option value="FIX">FIX - Remediate vulnerabilities</option>
+                            <option value="ASSERT">ASSERT - Add invariants</option>
+                            <option value="DENY">DENY - Block dangerous pattern</option>
+                            <option value="PERMIT">PERMIT - Allow after validation</option>
+                            <option value="HALT">HALT - Stop on violation</option>
+                        </select>
+
+                        <div class="section-label">Security Gate</div>
+                        <select id="gate-select" onchange="updateCommand()">
+                            <option value="">-- none --</option>
+                            <optgroup label="Memory Safety (C)">
+                                <option value="UAF-001">UAF-001: Use-after-free</option>
+                                <option value="DF-001">DF-001: Double-free</option>
+                                <option value="BOF-001">BOF-001: Buffer overflow</option>
+                                <option value="BOF-002">BOF-002: Out-of-bounds</option>
+                                <option value="NULL-001">NULL-001: Null dereference</option>
+                            </optgroup>
+                            <optgroup label="Integer Safety (C)">
+                                <option value="INT-001">INT-001: Allocation overflow</option>
+                                <option value="INT-002">INT-002: Arithmetic overflow</option>
+                                <option value="REF-001">REF-001: Refcount overflow</option>
+                            </optgroup>
+                            <optgroup label="Injection (Python)">
+                                <option value="INJ-001">INJ-001: Code injection (eval)</option>
+                                <option value="INJ-002">INJ-002: Command injection</option>
+                                <option value="INJ-003">INJ-003: SQL injection</option>
+                            </optgroup>
+                            <optgroup label="Deserialization (Python)">
+                                <option value="DESER-001">DESER-001: Unsafe pickle/yaml</option>
+                                <option value="PATH-001">PATH-001: Path traversal</option>
+                            </optgroup>
+                            <optgroup label="Crypto">
+                                <option value="CRYPT-001">CRYPT-001: Weak crypto</option>
+                                <option value="CRYPT-002">CRYPT-002: Insecure random</option>
+                            </optgroup>
+                        </select>
+
+                        <div class="section-label">Gate State</div>
+                        <div class="gate-display">
+                            <div class="gate-state gate-z" onclick="setGateState('Z')" title="Z = Skip (not applicable)">Z</div>
+                            <div class="gate-state gate-x" onclick="setGateState('X')" title="X = Unknown (needs check)">X</div>
+                            <div class="gate-state gate-0" onclick="setGateState('0')" title="0 = Deny">0</div>
+                            <div class="gate-state gate-1 active" onclick="setGateState('1')" title="1 = Allow">1</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        Command Builder
+                        <button class="copy-btn" onclick="copyCommand()">COPY</button>
+                    </div>
+                    <div class="panel-content">
+                        <div class="command-preview" id="command-preview">
+                            <span class="placeholder">Build your ExcLisp command...</span>
+                        </div>
+
+                        <div class="section-label">Mechanism [MECH]</div>
+                        <input type="text" id="mech-input" placeholder="predicate; condition -> action" oninput="updateCommand()">
+                        <div class="symbol-grid">
+                            <button class="symbol-btn" onclick="insertSymbol('→')">→</button>
+                            <button class="symbol-btn" onclick="insertSymbol('⇒')">⇒</button>
+                            <button class="symbol-btn" onclick="insertSymbol('∧')">∧</button>
+                            <button class="symbol-btn" onclick="insertSymbol('∨')">∨</button>
+                            <button class="symbol-btn" onclick="insertSymbol('¬')">¬</button>
+                            <button class="symbol-btn" onclick="insertSymbol('; ')">;</button>
+                            <button class="symbol-btn" onclick="insertSymbol(' AS ')">AS</button>
+                            <button class="symbol-btn" onclick="insertSymbol(' IS ')">IS</button>
+                            <button class="symbol-btn" onclick="insertSymbol('ptr')">ptr</button>
+                            <button class="symbol-btn" onclick="insertSymbol('idx')">idx</button>
+                            <button class="symbol-btn" onclick="insertSymbol('len')">len</button>
+                            <button class="symbol-btn" onclick="insertSymbol('nullptr')">nullptr</button>
+                        </div>
+
+                        <div class="section-label">NIST Controls</div>
+                        <div class="symbol-grid">
+                            <button class="symbol-btn nist-ctrl" data-ctrl="SI-16" onclick="toggleNIST(this)">SI-16</button>
+                            <button class="symbol-btn nist-ctrl" data-ctrl="SI-10" onclick="toggleNIST(this)">SI-10</button>
+                            <button class="symbol-btn nist-ctrl" data-ctrl="SC-13" onclick="toggleNIST(this)">SC-13</button>
+                            <button class="symbol-btn nist-ctrl" data-ctrl="AC-3" onclick="toggleNIST(this)">AC-3</button>
+                        </div>
+
+                        <div class="section-label">Context (optional)</div>
+                        <textarea id="context-input" placeholder="Add code context..." oninput="updateCommand()" style="min-height: 60px; width: 100%; padding: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;"></textarea>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">Quick Commands</div>
+                    <div class="panel-content">
+                        <div class="quick-cmd" onclick="loadQuick('analyze-uaf')">
+                            <div class="quick-title">{AI}::memory(ANALYZE)[UAF]</div>
+                            <div class="quick-desc">Analyze for use-after-free</div>
+                        </div>
+                        <div class="quick-cmd" onclick="loadQuick('fix-bounds')">
+                            <div class="quick-title">{AI}::bounds(FIX)[BOF-002]</div>
+                            <div class="quick-desc">Add bounds checking</div>
+                        </div>
+                        <div class="quick-cmd" onclick="loadQuick('protect-overflow')">
+                            <div class="quick-title">{AI}::overflow(PROTECT)[INT-002]</div>
+                            <div class="quick-desc">Add overflow protection</div>
+                        </div>
+                        <div class="quick-cmd" onclick="loadQuick('fix-injection')">
+                            <div class="quick-title">{AI}::injection(FIX)[INJ-001]</div>
+                            <div class="quick-desc">Fix eval/exec injection</div>
+                        </div>
+                        <div class="quick-cmd" onclick="loadQuick('fix-sql')">
+                            <div class="quick-title">{AI}::injection(FIX)[INJ-003]</div>
+                            <div class="quick-desc">Fix SQL injection</div>
+                        </div>
+                        <div class="quick-cmd" onclick="loadQuick('full-audit')">
+                            <div class="quick-title">{AI}::security(ANALYZE)[*; NIST]</div>
+                            <div class="quick-desc">Full security audit</div>
+                        </div>
+
+                        <div class="section-label" style="margin-top: 1rem;">ExcLisp Grammar</div>
+                        <div class="grammar-box">
+<pre>GRAMMAR: {AUTH}::DOMAIN(OP)[MECH]
+
+AUTH:   HUMAN | AI | SYSTEM | *
+DOMAIN: code | security | memory | bounds
+OP:     ANALYZE | PROTECT | VALIDATE | FIX
+
+GATE SEMANTICS:
+  condition AS result  (Pass 1: speculative)
+  condition IS result  (Pass 2: ground truth)
+
+GATE STATES:
+  Z = Skip (not applicable)
+  X = Unknown (needs check)
+  0 = Deny (blocked)
+  1 = Allow (permitted)
+
+INVARIANT:
+  ¬complete ⇒ ∅
+  no_path ⇒ no_claim</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Gate Reference -->
+        <div class="tab-content" id="tab-reference">
+            <div class="grid">
+                <div class="panel">
+                    <div class="panel-header">C Security Gates</div>
+                    <div class="panel-content" id="c-gates-ref"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Python Security Gates</div>
+                    <div class="panel-content" id="python-gates-ref"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">NIST 800-53 Mapping</div>
+                    <div class="panel-content">
+                        <table class="ref-table">
+                            <tr><th>Control</th><th>Title</th><th>Gates</th></tr>
+                            <tr><td>SI-16</td><td>Memory Protection</td><td>UAF, DF, BOF, NULL</td></tr>
+                            <tr><td>SI-10</td><td>Input Validation</td><td>BOF, INT, INJ, PATH</td></tr>
+                            <tr><td>SC-13</td><td>Cryptographic Protection</td><td>CRYPT</td></tr>
+                            <tr><td>SC-5</td><td>DoS Protection</td><td>DOS, REGEX</td></tr>
+                            <tr><td>IA-5</td><td>Authenticator Management</td><td>HARDCODE</td></tr>
+                            <tr><td>AU-3</td><td>Audit Content</td><td>LOG</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLang = 'c';
+        let lastFindings = [];
+        let selectedNIST = [];
+        let currentGateState = '1';
+
+        // ============================================================
+        // TAB NAVIGATION
+        // ============================================================
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // ============================================================
+        // EXCLISP COMMAND COMPOSER
+        // ============================================================
+        function updateCommand() {
+            const auth = document.getElementById('auth-select').value;
+            const domainSelect = document.getElementById('domain-select').value;
+            const domainCustom = document.getElementById('domain-custom').value;
+            const domain = domainCustom || domainSelect;
+            const op = document.getElementById('op-select').value;
+            const gate = document.getElementById('gate-select').value;
+            const mech = document.getElementById('mech-input').value;
+            const context = document.getElementById('context-input').value;
+
+            const preview = document.getElementById('command-preview');
+            
+            if (!auth && !domain && !op) {
+                preview.innerHTML = '<span class="placeholder">Build your ExcLisp command...</span>';
+                return;
+            }
+
+            let cmd = '';
+            if (auth) cmd += `<span class="auth">{${auth}}</span>`;
+            if (domain) cmd += `<span class="domain">::${domain}</span>`;
+            if (op) cmd += `<span class="op">(${op})</span>`;
+            
+            let mechParts = [];
+            if (gate) mechParts.push(gate);
+            if (mech) mechParts.push(mech);
+            if (selectedNIST.length > 0) mechParts.push('NIST ' + selectedNIST.join(', '));
+            
+            if (mechParts.length > 0) {
+                cmd += `<span class="mech">[${mechParts.join('; ')}]</span>`;
+            }
+
+            if (context) {
+                cmd += `<br><span style="color: var(--text-muted); font-size: 0.7rem;">/* ${escapeHtml(context.substring(0, 80))}${context.length > 80 ? '...' : ''} */</span>`;
+            }
+
+            preview.innerHTML = cmd || '<span class="placeholder">Build your command...</span>';
+        }
+
+        function insertSymbol(symbol) {
+            const input = document.getElementById('mech-input');
+            const start = input.selectionStart;
+            const text = input.value;
+            input.value = text.substring(0, start) + symbol + text.substring(input.selectionEnd);
+            input.selectionStart = input.selectionEnd = start + symbol.length;
+            input.focus();
+            updateCommand();
+        }
+
+        function toggleNIST(btn) {
+            const ctrl = btn.dataset.ctrl;
+            btn.classList.toggle('selected');
+            if (btn.classList.contains('selected')) {
+                if (!selectedNIST.includes(ctrl)) selectedNIST.push(ctrl);
+            } else {
+                selectedNIST = selectedNIST.filter(c => c !== ctrl);
+            }
+            updateCommand();
+        }
+
+        function setGateState(state) {
+            currentGateState = state;
+            document.querySelectorAll('.gate-state').forEach(g => g.classList.remove('active'));
+            document.querySelector('.gate-' + state.toLowerCase()).classList.add('active');
+        }
+
+        function copyCommand() {
+            const preview = document.getElementById('command-preview');
+            const text = preview.innerText || preview.textContent;
+            navigator.clipboard.writeText(text.replace(/\n/g, ' '));
+            event.target.textContent = 'COPIED!';
+            setTimeout(() => event.target.textContent = 'COPY', 1200);
+        }
+
+        const quickCommands = {
+            'analyze-uaf': { auth: 'AI', domain: 'memory', op: 'ANALYZE', gate: 'UAF-001', mech: 'free() → ptr usage' },
+            'fix-bounds': { auth: 'AI', domain: 'bounds', op: 'FIX', gate: 'BOF-002', mech: 'idx < len check' },
+            'protect-overflow': { auth: 'AI', domain: 'overflow', op: 'PROTECT', gate: 'INT-002', mech: '__builtin_*_overflow' },
+            'fix-injection': { auth: 'AI', domain: 'injection', op: 'FIX', gate: 'INJ-001', mech: 'ast.literal_eval()' },
+            'fix-sql': { auth: 'AI', domain: 'injection', op: 'FIX', gate: 'INJ-003', mech: 'parameterized query' },
+            'full-audit': { auth: 'AI', domain: 'security', op: 'ANALYZE', gate: '', mech: 'all gates; CVE mapping' }
+        };
+
+        function loadQuick(id) {
+            const qc = quickCommands[id];
+            if (!qc) return;
+            document.getElementById('auth-select').value = qc.auth;
+            document.getElementById('domain-select').value = qc.domain;
+            document.getElementById('domain-custom').value = '';
+            document.getElementById('op-select').value = qc.op;
+            document.getElementById('gate-select').value = qc.gate;
+            document.getElementById('mech-input').value = qc.mech;
+            updateCommand();
+        }
+
+        // ============================================================
+        // GATE REFERENCE
+        // ============================================================
+        function renderGateReference() {
+            const cContainer = document.getElementById('c-gates-ref');
+            const pyContainer = document.getElementById('python-gates-ref');
+
+            cContainer.innerHTML = Object.entries(cGates).map(([id, g]) => `
+                <div class="gate-ref-item">
+                    <div class="gate-ref-id" style="color: ${g.color}">${id}</div>
+                    <div class="gate-ref-desc">${g.desc} (${g.cwe})</div>
+                </div>
+            `).join('');
+
+            pyContainer.innerHTML = Object.entries(pythonGates).map(([id, g]) => `
+                <div class="gate-ref-item">
+                    <div class="gate-ref-id" style="color: ${g.color}">${id}</div>
+                    <div class="gate-ref-desc">${g.desc} (${g.cwe})</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', renderGateReference);
+
+        // ============================================================
+        // C SECURITY GATES
+        // ============================================================
+        const cGates = {
+            'UAF-001': { patterns: ['free('], desc: 'Use-after-free', cwe: 'CWE-416', severity: 'high', color: '#ec4899', nist: ['SI-16'] },
+            'DF-001': { patterns: ['free('], desc: 'Double-free risk', cwe: 'CWE-415', severity: 'high', color: '#f43f5e', nist: ['SI-16'] },
+            'BOF-001': { patterns: ['memcpy', 'strcpy', 'strcat', 'sprintf', 'gets'], desc: 'Buffer overflow', cwe: 'CWE-122', severity: 'high', color: '#ef4444', nist: ['SI-16', 'SI-10'] },
+            'BOF-002': { patterns: ['['], desc: 'Out-of-bounds access', cwe: 'CWE-125', severity: 'high', color: '#ef4444', nist: ['SI-16'] },
+            'NULL-001': { patterns: ['== NULL', '== nullptr', '!ptr'], desc: 'Null dereference risk', cwe: 'CWE-476', severity: 'medium', color: '#6b7280', nist: ['SI-16'] },
+            'NULL-002': { patterns: ['malloc(', 'calloc(', 'realloc('], desc: 'Unchecked allocation', cwe: 'CWE-476', severity: 'medium', color: '#6b7280', nist: ['SI-16'] },
+            'INT-001': { patterns: ['malloc(', '* sizeof'], desc: 'Allocation overflow', cwe: 'CWE-190', severity: 'high', color: '#f59e0b', nist: ['SI-16'] },
+            'INT-002': { patterns: ['++', '--', '+=', '-=', '*='], desc: 'Integer overflow', cwe: 'CWE-190', severity: 'medium', color: '#f59e0b', nist: ['SI-16'] },
+            'REF-001': { patterns: ['++', 'incref', 'addref'], desc: 'Refcount overflow', cwe: 'CWE-190', severity: 'high', color: '#14b8a6', nist: ['SI-16'] },
+            'DOS-001': { patterns: ['hash', 'dict', 'map['], desc: 'Hash collision DoS', cwe: 'CWE-400', severity: 'low', color: '#64748b', nist: ['SC-5'] }
+        };
+
+        // ============================================================
+        // PYTHON SECURITY GATES
+        // ============================================================
+        const pythonGates = {
+            'INJ-001': { 
+                patterns: ['eval(', 'exec(', 'compile('], 
+                desc: 'Code injection via eval/exec', 
+                cwe: 'CWE-94', 
+                severity: 'high', 
+                color: '#ef4444',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[INJ-001; use ast.literal_eval(); avoid eval/exec]'
+            },
+            'INJ-002': { 
+                patterns: ['os.system(', 'subprocess.call(', 'subprocess.Popen(', 'os.popen('], 
+                desc: 'Command injection', 
+                cwe: 'CWE-78', 
+                severity: 'high', 
+                color: '#ef4444',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[INJ-002; use subprocess with shell=False; shlex.quote()]'
+            },
+            'INJ-003': { 
+                patterns: ['cursor.execute(', 'execute(', '.query(', 'raw('], 
+                desc: 'SQL injection risk', 
+                cwe: 'CWE-89', 
+                severity: 'high', 
+                color: '#ef4444',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[INJ-003; use parameterized queries; never string format SQL]'
+            },
+            'PATH-001': { 
+                patterns: ['open(', 'os.path.join(', 'pathlib.Path('], 
+                desc: 'Path traversal risk', 
+                cwe: 'CWE-22', 
+                severity: 'medium', 
+                color: '#f59e0b',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[PATH-001; validate path; use os.path.realpath(); check prefix]'
+            },
+            'DESER-001': { 
+                patterns: ['pickle.load', 'pickle.loads', 'yaml.load(', 'yaml.unsafe_load'], 
+                desc: 'Unsafe deserialization', 
+                cwe: 'CWE-502', 
+                severity: 'high', 
+                color: '#ec4899',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[DESER-001; use yaml.safe_load(); avoid pickle for untrusted data]'
+            },
+            'DESER-002': { 
+                patterns: ['marshal.load', 'shelve.open'], 
+                desc: 'Unsafe deserialization (marshal/shelve)', 
+                cwe: 'CWE-502', 
+                severity: 'high', 
+                color: '#ec4899',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[DESER-002; use JSON for untrusted data; validate before load]'
+            },
+            'CRYPT-001': { 
+                patterns: ['md5(', 'sha1(', 'DES', 'RC4'], 
+                desc: 'Weak cryptography', 
+                cwe: 'CWE-327', 
+                severity: 'medium', 
+                color: '#a855f7',
+                nist: ['SC-13'],
+                fix: '{AI}::code(FIX)[CRYPT-001; use SHA-256+; use AES-256-GCM]'
+            },
+            'CRYPT-002': { 
+                patterns: ['random.', 'random.randint', 'random.choice'], 
+                desc: 'Insecure randomness', 
+                cwe: 'CWE-330', 
+                severity: 'medium', 
+                color: '#a855f7',
+                nist: ['SC-13'],
+                fix: '{AI}::code(FIX)[CRYPT-002; use secrets module; secrets.token_bytes()]'
+            },
+            'SSRF-001': { 
+                patterns: ['requests.get(', 'requests.post(', 'urllib.request.urlopen(', 'httpx.'], 
+                desc: 'SSRF risk', 
+                cwe: 'CWE-918', 
+                severity: 'medium', 
+                color: '#f59e0b',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[SSRF-001; validate URL scheme/host; whitelist allowed domains]'
+            },
+            'XXE-001': { 
+                patterns: ['xml.etree.ElementTree', 'lxml.etree', 'xml.dom.minidom'], 
+                desc: 'XXE risk in XML parsing', 
+                cwe: 'CWE-611', 
+                severity: 'medium', 
+                color: '#f59e0b',
+                nist: ['SI-10'],
+                fix: '{AI}::code(FIX)[XXE-001; use defusedxml; disable external entities]'
+            },
+            'HARDCODE-001': { 
+                patterns: ['password =', 'api_key =', 'secret =', 'token =', 'PASSWORD', 'API_KEY', 'SECRET'], 
+                desc: 'Hardcoded credentials', 
+                cwe: 'CWE-798', 
+                severity: 'high', 
+                color: '#ef4444',
+                nist: ['IA-5'],
+                fix: '{AI}::code(FIX)[HARDCODE-001; use environment variables; use secrets manager]'
+            },
+            'ASSERT-001': { 
+                patterns: ['assert '], 
+                desc: 'Assert for security checks', 
+                cwe: 'CWE-617', 
+                severity: 'low', 
+                color: '#64748b',
+                nist: ['SI-16'],
+                fix: '{AI}::code(FIX)[ASSERT-001; use explicit if/raise; assert disabled with -O]'
+            },
+            'TEMP-001': { 
+                patterns: ['tempfile.mktemp(', '/tmp/', 'tempfile.NamedTemporaryFile'], 
+                desc: 'Insecure temp file', 
+                cwe: 'CWE-377', 
+                severity: 'low', 
+                color: '#64748b',
+                nist: ['SI-16'],
+                fix: '{AI}::code(FIX)[TEMP-001; use tempfile.mkstemp(); use context manager]'
+            },
+            'LOG-001': { 
+                patterns: ['print(password', 'print(secret', 'logging.debug(password', 'logger.info(token'], 
+                desc: 'Sensitive data in logs', 
+                cwe: 'CWE-532', 
+                severity: 'medium', 
+                color: '#f59e0b',
+                nist: ['AU-3'],
+                fix: '{AI}::code(FIX)[LOG-001; mask sensitive data; use structured logging]'
+            },
+            'REGEX-001': { 
+                patterns: ['re.compile(', 're.match(', 're.search('], 
+                desc: 'ReDoS risk', 
+                cwe: 'CWE-1333', 
+                severity: 'low', 
+                color: '#64748b',
+                nist: ['SC-5'],
+                fix: '{AI}::code(FIX)[REGEX-001; avoid nested quantifiers; set timeout; use re2]'
+            }
+        };
+
+        // Safe idioms that reduce severity
+        const pythonSafeIdioms = {
+            parameterizedQuery: {
+                pattern: /execute\s*\([^,]+,\s*[\[\(]/,
+                affects: ['INJ-003'],
+                reason: 'Parameterized query detected'
+            },
+            safeYaml: {
+                pattern: /yaml\.safe_load/,
+                affects: ['DESER-001'],
+                reason: 'Using safe_load'
+            },
+            shellFalse: {
+                pattern: /shell\s*=\s*False/,
+                affects: ['INJ-002'],
+                reason: 'shell=False specified'
+            },
+            secretsModule: {
+                pattern: /secrets\./,
+                affects: ['CRYPT-002'],
+                reason: 'Using secrets module'
+            },
+            envVar: {
+                pattern: /os\.environ|getenv/,
+                affects: ['HARDCODE-001'],
+                reason: 'Using environment variable'
+            }
+        };
+
+        // ============================================================
+        // LANGUAGE SWITCHING
+        // ============================================================
+        function setLang(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.lang-btn.${lang === 'c' ? 'c-lang' : lang}`).classList.add('active');
+            
+            document.getElementById('lang-label').textContent = lang === 'c' ? 'C Source Code' : 'Python Source Code';
+            document.getElementById('code-input').placeholder = lang === 'c' 
+                ? '/* Paste C code here */\nvoid process(char *buf, size_t len) {\n    memcpy(dst, src, len + 10);\n}'
+                : '# Paste Python code here\ndef process(user_input):\n    eval(user_input)  # Dangerous!';
+            
+            // Clear results
+            document.getElementById('results').innerHTML = '<p style="color: var(--text-muted); font-size: 0.75rem;">Enter code and click Analyze.</p>';
+            document.getElementById('prompts').innerHTML = '<p style="color: var(--text-muted); font-size: 0.75rem;">Run analysis to generate prompts.</p>';
+            ['stat-high', 'stat-medium', 'stat-low', 'stat-gates'].forEach(id => {
+                document.getElementById(id).textContent = '0';
+            });
+        }
+
+        // ============================================================
+        // ANALYSIS
+        // ============================================================
+        function analyze() {
+            const code = document.getElementById('code-input').value;
+            const lines = code.split('\n');
+            const findings = [];
+            const gates = currentLang === 'c' ? cGates : pythonGates;
+            const safeIdioms = currentLang === 'python' ? pythonSafeIdioms : {};
+
+            // Track for C-specific UAF/DF detection
+            const freeVars = new Map();
+
+            lines.forEach((line, lineNum) => {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#') && currentLang === 'python') {
+                    // Skip comments (but # in C is preprocessor, keep it)
+                    if (currentLang === 'python' && trimmed.startsWith('#')) return;
+                    if (currentLang === 'c' && trimmed.startsWith('//')) return;
+                }
+
+                // C-specific: Track free() for UAF/DF
+                if (currentLang === 'c') {
+                    const freeMatch = line.match(/free\s*\(\s*(\w+)\s*\)/);
+                    if (freeMatch) {
+                        const varName = freeMatch[1];
+                        if (freeVars.has(varName)) {
+                            findings.push(createFinding('DF-001', lineNum + 1, line, 'Double-free detected'));
+                        }
+                        freeVars.set(varName, lineNum + 1);
+                    }
+
+                    // Check for use after free
+                    freeVars.forEach((freeLine, varName) => {
+                        if (lineNum + 1 > freeLine && line.includes(varName) && !line.includes('free')) {
+                            if (line.match(new RegExp(`${varName}\\s*\\[|${varName}\\s*->|\\*\\s*${varName}`))) {
+                                findings.push(createFinding('UAF-001', lineNum + 1, line, `Use of '${varName}' after free`));
+                            }
+                        }
+                    });
+                }
+
+                // Pattern matching for both languages
+                for (const [gateId, gate] of Object.entries(gates)) {
+                    for (const pattern of gate.patterns) {
+                        if (line.includes(pattern)) {
+                            // Check safe idioms (Python)
+                            let isSafe = false;
+                            if (currentLang === 'python') {
+                                for (const [idiomName, idiom] of Object.entries(safeIdioms)) {
+                                    if (idiom.affects.includes(gateId) && idiom.pattern.test(line)) {
+                                        isSafe = true;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (!isSafe) {
+                                const existing = findings.find(f => f.gate === gateId && f.line === lineNum + 1);
+                                if (!existing) {
+                                    findings.push(createFinding(gateId, lineNum + 1, line, gate.desc));
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            });
+
+            // Sort by severity
+            findings.sort((a, b) => {
+                const sev = { high: 0, medium: 1, low: 2 };
+                return (sev[a.severity] || 2) - (sev[b.severity] || 2);
+            });
+
+            lastFindings = findings;
+            renderResults(findings);
+            renderPrompts(findings);
+        }
+
+        function createFinding(gateId, line, code, desc) {
+            const gates = currentLang === 'c' ? cGates : pythonGates;
+            const gate = gates[gateId];
+            return {
+                gate: gateId,
+                line,
+                code: code.trim(),
+                desc: desc || gate?.desc || '',
+                severity: gate?.severity || 'medium',
+                cwe: gate?.cwe || 'CWE-???',
+                nist: gate?.nist || [],
+                color: gate?.color || '#666',
+                fix: gate?.fix || `{AI}::code(FIX)[${gateId}]`
+            };
+        }
+
+        function renderResults(findings) {
+            const container = document.getElementById('results');
+            document.getElementById('finding-count').textContent = `${findings.length} findings`;
+
+            const high = findings.filter(f => f.severity === 'high').length;
+            const medium = findings.filter(f => f.severity === 'medium').length;
+            const low = findings.filter(f => f.severity === 'low').length;
+            const gates = new Set(findings.map(f => f.gate)).size;
+
+            document.getElementById('stat-high').textContent = high;
+            document.getElementById('stat-medium').textContent = medium;
+            document.getElementById('stat-low').textContent = low;
+            document.getElementById('stat-gates').textContent = gates;
+
+            if (findings.length === 0) {
+                container.innerHTML = '<p style="color: var(--success);">✓ No security issues detected.</p>';
+                return;
+            }
+
+            container.innerHTML = findings.map(f => `
+                <div class="finding">
+                    <div class="finding-header">
+                        <span class="finding-gate" style="background: ${f.color}">${f.gate}</span>
+                        <span class="severity-badge severity-${f.severity}">${f.severity.toUpperCase()}</span>
+                        <span class="finding-line">Line ${f.line}</span>
+                    </div>
+                    <div class="finding-desc">${escapeHtml(f.desc)}</div>
+                    <div class="finding-code">${escapeHtml(f.code)}</div>
+                    <div class="finding-nist">
+                        <span class="nist-badge cwe-badge">${f.cwe}</span>
+                        ${f.nist.map(n => `<span class="nist-badge">${n}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderPrompts(findings) {
+            const container = document.getElementById('prompts');
+            
+            if (findings.length === 0) {
+                container.innerHTML = '<p style="color: var(--success);">✓ No prompts needed.</p>';
+                return;
+            }
+
+            const uniqueGates = [...new Set(findings.map(f => f.gate))];
+            const gates = currentLang === 'c' ? cGates : pythonGates;
+
+            container.innerHTML = uniqueGates.map(gateId => {
+                const gate = gates[gateId];
+                const gateFindings = findings.filter(f => f.gate === gateId);
+                const lines = gateFindings.map(f => f.line).join(', ');
+                const fix = gate?.fix || `{AI}::code(FIX)[${gateId}]`;
+                
+                return `
+                    <div class="prompt-card">
+                        <div class="prompt-cmd">${escapeHtml(fix)}</div>
+                        <div class="prompt-desc">Lines: ${lines} | ${gate?.cwe || 'CWE-???'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================================
+        // UTILITIES
+        // ============================================================
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function pasteCode() {
+            navigator.clipboard.readText().then(text => {
+                document.getElementById('code-input').value = text;
+                setTimeout(analyze, 100);
+            }).catch(() => {
+                document.getElementById('code-input').focus();
+                alert('Clipboard access denied. Press Ctrl+V to paste.');
+            });
+        }
+
+        function copyAllPrompts() {
+            const gates = currentLang === 'c' ? cGates : pythonGates;
+            const uniqueGates = [...new Set(lastFindings.map(f => f.gate))];
+            const text = uniqueGates.map(gateId => {
+                const gate = gates[gateId];
+                const lines = lastFindings.filter(f => f.gate === gateId).map(f => f.line).join(', ');
+                return `/* ${gateId} - Lines: ${lines} */\n${gate?.fix || `{AI}::code(FIX)[${gateId}]`}`;
+            }).join('\n\n');
+            
+            navigator.clipboard.writeText(text);
+            event.target.textContent = 'COPIED!';
+            setTimeout(() => event.target.textContent = 'COPY ALL', 1200);
+        }
+    </script>
+</body>
+</html>
