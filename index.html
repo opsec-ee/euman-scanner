@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euman Security Scanner v2</title>
+    <title>Euman Security Scanner v3</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --bg-tertiary: #1a1a24;
+            --bg-elevated: #1e1e2a;
             --border: #2a2a3a;
+            --border-light: #3a3a4a;
             --text-primary: #e8e8f0;
             --text-secondary: #a0a0b0;
             --text-muted: #606070;
@@ -19,8 +21,14 @@
             --success: #4ade80;
             --warning: #fbbf24;
             --error: #f87171;
+            --critical: #dc2626;
+            --info: #38bdf8;
+            --purple: #a78bfa;
             --python: #3572A5;
             --c-lang: #555555;
+            --terraform: #844fba;
+            --kubernetes: #326ce5;
+            --docker: #2496ed;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -28,66 +36,136 @@
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
-            padding: 1rem;
         }
-        .container { max-width: 1800px; margin: 0 auto; }
-        header {
+        
+        /* Layout */
+        .app-container { display: flex; height: 100vh; }
+        .sidebar {
+            width: 220px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header {
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
-            padding-bottom: 0.75rem;
-            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
         }
-        h1 {
+        .content-area { flex: 1; overflow: auto; padding: 1rem; }
+
+        /* Sidebar */
+        .logo {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .logo h1 {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: var(--accent);
         }
-        h1 span { 
-            font-size: 0.7rem; 
-            color: var(--text-muted); 
-            font-weight: 400;
+        .logo span { font-size: 0.6rem; color: var(--text-muted); display: block; margin-top: 0.2rem; }
+        .nav-section { padding: 0.75rem 0; }
+        .nav-label {
+            padding: 0.3rem 1rem;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
         }
-        .controls {
+        .nav-item {
             display: flex;
-            gap: 0.5rem;
             align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            border-left: 2px solid transparent;
         }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--bg-tertiary); color: var(--accent); border-left-color: var(--accent); }
+        .nav-icon { width: 16px; text-align: center; }
+        .nav-badge {
+            margin-left: auto;
+            background: var(--error);
+            color: white;
+            font-size: 0.55rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .nav-badge.warn { background: var(--warning); color: black; }
+        .nav-badge.info { background: var(--info); }
+
+        /* Header */
+        .header-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+        .header-actions { display: flex; gap: 0.5rem; align-items: center; }
         .lang-toggle {
             display: flex;
-            gap: 0.25rem;
+            gap: 0.2rem;
             background: var(--bg-tertiary);
-            padding: 0.2rem;
+            padding: 0.15rem;
             border-radius: 4px;
             border: 1px solid var(--border);
         }
         .lang-btn {
-            padding: 0.4rem 0.8rem;
+            padding: 0.3rem 0.6rem;
             border: none;
             border-radius: 3px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
+            font-size: 0.65rem;
             cursor: pointer;
             background: transparent;
-            color: var(--text-secondary);
-            transition: all 0.2s;
+            color: var(--text-muted);
         }
         .lang-btn.active { color: white; }
-        .lang-btn.c-lang.active { background: var(--c-lang); }
-        .lang-btn.python.active { background: var(--python); }
-        .grid { display: grid; grid-template-columns: 1fr 1.2fr 0.8fr; gap: 1rem; }
-        .panel {
+        .lang-btn[data-lang="c"].active { background: var(--c-lang); }
+        .lang-btn[data-lang="python"].active { background: var(--python); }
+        .lang-btn[data-lang="terraform"].active { background: var(--terraform); }
+        .lang-btn[data-lang="kubernetes"].active { background: var(--kubernetes); }
+        .lang-btn[data-lang="docker"].active { background: var(--docker); }
+
+        /* Buttons */
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-dim); }
+
+        /* Grid layouts */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+
+        /* Cards */
+        .card {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 6px;
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
         }
-        .panel-header {
+        .card-header {
             background: var(--bg-tertiary);
             padding: 0.5rem 0.75rem;
             border-bottom: 1px solid var(--border);
@@ -98,15 +176,68 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        .card-body { padding: 0.75rem; }
+        .card-body.scroll { max-height: 400px; overflow-y: auto; }
+
+        /* Metrics */
+        .metric-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .metric-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0.3rem;
+        }
+        .metric-card.critical .metric-value { color: var(--critical); }
+        .metric-card.high .metric-value { color: var(--error); }
+        .metric-card.medium .metric-value { color: var(--warning); }
+        .metric-card.low .metric-value { color: var(--success); }
+        .metric-card.info .metric-value { color: var(--info); }
+
+        /* Risk Score */
+        .risk-score {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .risk-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
             flex-shrink: 0;
         }
-        .panel-content {
-            padding: 0.75rem;
-            overflow-y: auto;
-            flex: 1;
-            max-height: calc(100vh - 160px);
-        }
-        .code-input {
+        .risk-circle.critical { background: rgba(220, 38, 38, 0.2); border: 3px solid var(--critical); color: var(--critical); }
+        .risk-circle.high { background: rgba(248, 113, 113, 0.2); border: 3px solid var(--error); color: var(--error); }
+        .risk-circle.medium { background: rgba(251, 191, 36, 0.2); border: 3px solid var(--warning); color: var(--warning); }
+        .risk-circle.low { background: rgba(74, 222, 128, 0.2); border: 3px solid var(--success); color: var(--success); }
+        .risk-details { flex: 1; }
+        .risk-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .risk-subtitle { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* Code editor */
+        .code-editor {
             width: 100%;
             min-height: 300px;
             padding: 0.75rem;
@@ -117,50 +248,141 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.7rem;
             resize: vertical;
-            margin-bottom: 0.5rem;
             line-height: 1.5;
         }
-        .code-input:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            padding: 0.5rem 1rem;
-            background: var(--accent);
-            border: none;
-            border-radius: 4px;
-            color: var(--bg-primary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .btn:hover { background: var(--accent-dim); }
-        .btn-row {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .btn-secondary {
+        .code-editor:focus { outline: none; border-color: var(--accent); }
+
+        /* Findings */
+        .finding-item {
             background: var(--bg-tertiary);
-            color: var(--text-secondary);
             border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
         }
-        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-        .copy-btn {
-            padding: 0.2rem 0.5rem;
+        .finding-header {
+            display: flex;
+            align-items: center;
+            padding: 0.6rem 0.75rem;
+            cursor: pointer;
+            gap: 0.75rem;
+        }
+        .finding-header:hover { background: var(--bg-elevated); }
+        .finding-severity {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .finding-severity.critical { background: var(--critical); color: white; }
+        .finding-severity.high { background: var(--error); color: white; }
+        .finding-severity.medium { background: var(--warning); color: black; }
+        .finding-severity.low { background: var(--success); color: black; }
+        .finding-title { flex: 1; font-size: 0.8rem; }
+        .finding-gate {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--accent);
+        }
+        .finding-meta {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+        .finding-body {
+            display: none;
+            padding: 0.75rem;
+            border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        .finding-item.expanded .finding-body { display: block; }
+        .finding-code {
             background: var(--bg-primary);
             border: 1px solid var(--border);
-            border-radius: 3px;
-            color: var(--text-muted);
+            border-radius: 4px;
+            padding: 0.5rem;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            cursor: pointer;
+            font-size: 0.65rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
         }
-        .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .finding-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .tag.owasp { border-color: var(--purple); color: var(--purple); }
+        .tag.cwe { border-color: var(--info); color: var(--info); }
+        .tag.nist { border-color: var(--success); color: var(--success); }
+
+        /* Attack Path */
+        .attack-path {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        .attack-step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0;
+        }
+        .attack-step:not(:last-child)::after {
+            content: '↓';
+            display: block;
+            text-align: center;
+            color: var(--text-muted);
+            padding: 0.2rem 0;
+        }
+        .attack-node {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.7rem;
+            flex: 1;
+        }
+        .attack-node.source { border-color: var(--info); }
+        .attack-node.sink { border-color: var(--error); }
+
+        /* Secrets */
+        .secret-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            margin-bottom: 0.4rem;
+        }
+        .secret-icon { font-size: 1rem; }
+        .secret-info { flex: 1; }
+        .secret-type { font-size: 0.75rem; font-weight: 600; }
+        .secret-location { font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .secret-preview {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--error);
+            background: var(--bg-primary);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+        }
 
         /* Function blocks */
         .func-block {
             background: var(--bg-tertiary);
             border: 1px solid var(--border);
             border-radius: 6px;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             overflow: hidden;
         }
         .func-header {
@@ -168,1236 +390,920 @@
             justify-content: space-between;
             align-items: center;
             padding: 0.5rem 0.75rem;
-            background: var(--bg-secondary);
             cursor: pointer;
-            user-select: none;
         }
-        .func-header:hover { background: var(--bg-primary); }
+        .func-header:hover { background: var(--bg-elevated); }
         .func-name {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.8rem;
             font-weight: 600;
             color: var(--accent);
         }
-        .func-meta {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        .func-lines {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: var(--text-muted);
-        }
+        .func-badges { display: flex; gap: 0.3rem; }
         .func-badge {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.55rem;
-            padding: 0.15rem 0.4rem;
+            font-size: 0.5rem;
+            padding: 0.1rem 0.35rem;
             border-radius: 3px;
-            font-weight: 600;
         }
-        .badge-high { background: var(--error); color: white; }
-        .badge-med { background: var(--warning); color: black; }
-        .badge-low { background: var(--success); color: black; }
-        .badge-clean { background: var(--bg-primary); color: var(--success); border: 1px solid var(--success); }
-        .func-chevron {
-            color: var(--text-muted);
-            transition: transform 0.2s;
-        }
-        .func-block.expanded .func-chevron { transform: rotate(90deg); }
         .func-body {
             display: none;
-            padding: 0.5rem 0.75rem;
             border-top: 1px solid var(--border);
         }
         .func-block.expanded .func-body { display: block; }
         .func-code {
             background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
             padding: 0.5rem;
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.65rem;
             overflow-x: auto;
-            margin-bottom: 0.5rem;
             max-height: 200px;
             overflow-y: auto;
         }
-        .func-code .line {
-            display: flex;
-            line-height: 1.6;
-        }
-        .func-code .line-num {
+        .code-line { display: flex; line-height: 1.6; }
+        .line-num {
             color: var(--text-muted);
             min-width: 35px;
             text-align: right;
             padding-right: 10px;
             user-select: none;
         }
-        .func-code .line-content { flex: 1; }
-        .func-code .line.has-finding { background: rgba(248, 113, 113, 0.1); }
-        .func-code .line.has-finding-med { background: rgba(251, 191, 36, 0.1); }
-        .func-code .line.has-finding-low { background: rgba(74, 222, 128, 0.1); }
+        .line-content { flex: 1; white-space: pre; }
+        .line-finding { background: rgba(248, 113, 113, 0.15); }
+        .line-secret { background: rgba(220, 38, 38, 0.2); }
 
-        /* Findings */
-        .finding {
-            background: var(--bg-primary);
-            border-left: 3px solid var(--error);
-            padding: 0.4rem 0.5rem;
-            margin-bottom: 0.3rem;
-            border-radius: 0 4px 4px 0;
-            font-size: 0.7rem;
-        }
-        .finding.medium { border-left-color: var(--warning); }
-        .finding.low { border-left-color: var(--success); }
-        .finding-header {
+        /* OWASP Breakdown */
+        .owasp-item {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-        .finding-id {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            font-weight: 600;
-        }
-        .finding-severity {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.5rem;
-            padding: 0.1rem 0.25rem;
-            border-radius: 2px;
-            background: var(--error);
-            color: white;
-        }
-        .finding-severity.medium { background: var(--warning); color: black; }
-        .finding-severity.low { background: var(--success); color: black; }
-        .finding-desc {
-            color: var(--text-secondary);
-            margin-top: 0.2rem;
-        }
-        .finding-line {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: var(--text-muted);
-            margin-top: 0.15rem;
-        }
-
-        /* Summary */
-        .summary {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-        .summary-card {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
+            gap: 0.75rem;
             padding: 0.5rem;
-            text-align: center;
+            border-bottom: 1px solid var(--border);
         }
-        .summary-value {
+        .owasp-item:last-child { border-bottom: none; }
+        .owasp-rank {
+            width: 28px;
+            height: 28px;
+            background: var(--purple);
+            color: white;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.2rem;
+            font-size: 0.7rem;
             font-weight: 700;
         }
-        .summary-label {
-            font-size: 0.6rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-        .summary-card.high .summary-value { color: var(--error); }
-        .summary-card.med .summary-value { color: var(--warning); }
-        .summary-card.low .summary-value { color: var(--success); }
-        .summary-card.funcs .summary-value { color: var(--accent); }
-
-        /* Prompts */
-        .prompt-section {
-            margin-bottom: 0.75rem;
-        }
-        .prompt-section-header {
+        .owasp-info { flex: 1; }
+        .owasp-name { font-size: 0.75rem; font-weight: 600; }
+        .owasp-desc { font-size: 0.65rem; color: var(--text-muted); }
+        .owasp-count {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            margin-bottom: 0.3rem;
-            text-transform: uppercase;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
-        .prompt-item {
+
+        /* Data Flow */
+        .dataflow-container {
             background: var(--bg-primary);
             border: 1px solid var(--border);
-            padding: 0.4rem 0.5rem;
-            margin-bottom: 0.25rem;
             border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: var(--accent);
-            cursor: pointer;
-            word-break: break-all;
+            padding: 1rem;
         }
-        .prompt-item:hover { border-color: var(--accent); }
-
-        /* Global findings */
-        .global-section {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        .global-title {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--warning);
+        .dataflow-path {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
             margin-bottom: 0.5rem;
         }
+        .dataflow-node {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+        }
+        .dataflow-node.tainted { border-color: var(--error); color: var(--error); }
+        .dataflow-arrow { color: var(--text-muted); }
+
+        /* Export */
+        .export-options { display: flex; gap: 0.5rem; }
 
         /* Tabs */
-        .tab-nav {
+        .tab-bar {
             display: flex;
             gap: 0.2rem;
+            background: var(--bg-tertiary);
+            padding: 0.3rem;
+            border-radius: 4px;
             margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 0.4rem;
         }
         .tab-btn {
             padding: 0.4rem 0.8rem;
-            border: 1px solid transparent;
-            border-bottom: none;
-            border-radius: 4px 4px 0 0;
-            background: var(--bg-secondary);
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            cursor: pointer;
-        }
-        .tab-btn:hover { background: var(--bg-tertiary); }
-        .tab-btn.active { background: var(--bg-tertiary); color: var(--accent); border-color: var(--border); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-
-        /* Composer styles */
-        .section-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin: 0.75rem 0 0.3rem 0;
-        }
-        .section-label:first-child { margin-top: 0; }
-        select, input[type="text"] {
-            width: 100%;
-            padding: 0.4rem 0.6rem;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-        }
-        select:focus, input:focus { border-color: var(--accent); outline: none; }
-        .command-preview {
-            background: var(--bg-primary);
-            border: 2px solid var(--border);
-            border-radius: 6px;
-            padding: 0.75rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            min-height: 60px;
-            margin-bottom: 0.75rem;
-            line-height: 1.6;
-        }
-        .command-preview .auth { color: #f472b6; }
-        .command-preview .domain { color: #60a5fa; }
-        .command-preview .op { color: #4ade80; }
-        .command-preview .mech { color: #fbbf24; }
-        .command-preview .placeholder { color: var(--text-muted); }
-        .symbol-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-            margin-top: 0.4rem;
-        }
-        .symbol-btn {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
+            border: none;
             border-radius: 3px;
-            padding: 0.2rem 0.45rem;
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            cursor: pointer;
-        }
-        .symbol-btn:hover { background: var(--accent); color: var(--bg-primary); }
-        .symbol-btn.selected { background: var(--accent-dim); color: white; }
-        .gate-display {
-            display: flex;
-            gap: 0.3rem;
-            margin-top: 0.5rem;
-        }
-        .gate-state {
-            flex: 1;
-            text-align: center;
-            padding: 0.4rem;
-            border-radius: 3px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            opacity: 0.4;
-        }
-        .gate-state.active { opacity: 1; }
-        .gate-z { background: #6b7280; color: white; }
-        .gate-x { background: #f59e0b; color: black; }
-        .gate-0 { background: #ef4444; color: white; }
-        .gate-1 { background: #22c55e; color: black; }
-        .quick-cmd {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0.5rem;
-            margin-bottom: 0.4rem;
-            cursor: pointer;
-        }
-        .quick-cmd:hover { border-color: var(--accent); }
-        .quick-title {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--accent);
-        }
-        .quick-desc {
-            font-size: 0.65rem;
+            background: transparent;
             color: var(--text-muted);
-        }
-        .grammar-box {
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0.5rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: var(--text-secondary);
-        }
-        .grammar-box pre { margin: 0; white-space: pre-wrap; }
-        .ref-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.7rem;
-        }
-        .ref-table th, .ref-table td {
-            padding: 0.4rem;
-            border: 1px solid var(--border);
-            text-align: left;
-        }
-        .ref-table th {
-            background: var(--bg-tertiary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-        }
-        .gate-ref-item {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0.5rem;
-            margin-bottom: 0.4rem;
-        }
-        .gate-ref-id {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .gate-ref-desc {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-        }
-        textarea.context-input {
-            min-height: 60px;
-            width: 100%;
-            padding: 0.5rem;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            color: var(--text-primary);
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.7rem;
-            resize: vertical;
+            cursor: pointer;
         }
-        textarea.context-input:focus { border-color: var(--accent); outline: none; }
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { background: var(--bg-primary); color: var(--accent); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
 
+        /* Empty state */
         .empty-state {
             text-align: center;
+            padding: 3rem;
             color: var(--text-muted);
-            padding: 2rem;
-            font-size: 0.8rem;
         }
+        .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
 
-        @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .sidebar { width: 60px; }
+            .nav-label, .nav-item span:not(.nav-icon):not(.nav-badge) { display: none; }
+            .nav-item { justify-content: center; padding: 0.75rem; }
+            .logo h1 { font-size: 0.7rem; }
+            .logo span { display: none; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>EUMAN SECURITY SCANNER <span>v2.0 - Function Analysis</span></h1>
-            <div class="controls">
-                <div class="lang-toggle">
-                    <button class="lang-btn c-lang active" onclick="setLang('c')">C</button>
-                    <button class="lang-btn python" onclick="setLang('python')">Python</button>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <h1>EUMAN</h1>
+                <span>Security Scanner v3</span>
+            </div>
+            <div class="nav-section">
+                <div class="nav-label">Analysis</div>
+                <div class="nav-item active" onclick="showView('dashboard')">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="showView('scan')">
+                    <span class="nav-icon">🔍</span>
+                    <span>Scan Code</span>
+                </div>
+                <div class="nav-item" onclick="showView('findings')">
+                    <span class="nav-icon">⚠️</span>
+                    <span>Findings</span>
+                    <span class="nav-badge" id="nav-findings-count">0</span>
+                </div>
+                <div class="nav-item" onclick="showView('secrets')">
+                    <span class="nav-icon">🔑</span>
+                    <span>Secrets</span>
+                    <span class="nav-badge" id="nav-secrets-count">0</span>
+                </div>
+                <div class="nav-item" onclick="showView('dataflow')">
+                    <span class="nav-icon">🔀</span>
+                    <span>Data Flow</span>
                 </div>
             </div>
-        </header>
-
-        <!-- Tab Navigation -->
-        <div class="tab-nav">
-            <button class="tab-btn active" onclick="showTab('analyze')">Analyze</button>
-            <button class="tab-btn" onclick="showTab('composer')">ExcLisp Composer</button>
-            <button class="tab-btn" onclick="showTab('reference')">Gate Reference</button>
-        </div>
-
-        <!-- Tab: Analyze -->
-        <div class="tab-content active" id="tab-analyze">
-            <div class="grid">
-                <div class="panel">
-                    <div class="panel-header">
-                        <span id="lang-label">C Source Code</span>
-                        <button class="copy-btn" onclick="pasteCode()">PASTE</button>
-                    </div>
-                    <div class="panel-content">
-                        <textarea class="code-input" id="code-input" placeholder="// Paste C code here..."></textarea>
-                        <div class="btn-row">
-                            <button class="btn" onclick="analyze()">Analyze</button>
-                            <button class="btn btn-secondary" onclick="expandAll()">Expand All</button>
-                            <button class="btn btn-secondary" onclick="collapseAll()">Collapse All</button>
-                        </div>
-                    </div>
+            <div class="nav-section">
+                <div class="nav-label">Tools</div>
+                <div class="nav-item" onclick="showView('composer')">
+                    <span class="nav-icon">⚡</span>
+                    <span>ExcLisp</span>
                 </div>
-
-                <div class="panel">
-                    <div class="panel-header">
-                        Function Analysis
-                        <span id="finding-count" style="font-size: 0.55rem; color: var(--text-muted);"></span>
-                    </div>
-                    <div class="panel-content" id="results">
-                        <div class="empty-state">Enter code and click Analyze</div>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">
-                        AI Prompts
-                        <button class="copy-btn" onclick="copyAllPrompts()">COPY ALL</button>
-                    </div>
-                    <div class="panel-content" id="prompts">
-                        <div class="empty-state">Run analysis to generate prompts</div>
-                    </div>
+                <div class="nav-item" onclick="showView('reference')">
+                    <span class="nav-icon">📖</span>
+                    <span>Reference</span>
                 </div>
             </div>
         </div>
 
-        <!-- Tab: ExcLisp Composer -->
-        <div class="tab-content" id="tab-composer">
-            <div class="grid">
-                <div class="panel">
-                    <div class="panel-header">Component Selection</div>
-                    <div class="panel-content">
-                        <div class="section-label">Authority {AUTH}</div>
-                        <select id="auth-select" onchange="updateCommand()">
-                            <option value="">-- select --</option>
-                            <option value="HUMAN">HUMAN - Developer authority</option>
-                            <option value="AI">AI - Assistant authority</option>
-                            <option value="SYSTEM">SYSTEM - Automated enforcement</option>
-                            <option value="*">* - Universal</option>
-                        </select>
-
-                        <div class="section-label">Domain ::DOMAIN</div>
-                        <select id="domain-select" onchange="updateCommand()">
-                            <option value="">-- select --</option>
-                            <option value="code">code</option>
-                            <option value="security">security</option>
-                            <option value="memory">memory</option>
-                            <option value="bounds">bounds</option>
-                            <option value="overflow">overflow</option>
-                            <option value="type">type</option>
-                            <option value="refcount">refcount</option>
-                            <option value="validation">validation</option>
-                            <option value="injection">injection</option>
-                            <option value="crypto">crypto</option>
-                        </select>
-                        <input type="text" id="domain-custom" placeholder="or custom domain..." oninput="updateCommand()" style="margin-top: 0.3rem;">
-
-                        <div class="section-label">Operation (OP)</div>
-                        <select id="op-select" onchange="updateCommand()">
-                            <option value="">-- select --</option>
-                            <option value="ANALYZE">ANALYZE - Examine for patterns</option>
-                            <option value="PROTECT">PROTECT - Add defensive checks</option>
-                            <option value="VALIDATE">VALIDATE - Verify correctness</option>
-                            <option value="INSTRUMENT">INSTRUMENT - Insert GATE_CHECK</option>
-                            <option value="FIX">FIX - Remediate vulnerabilities</option>
-                            <option value="ASSERT">ASSERT - Add invariants</option>
-                            <option value="DENY">DENY - Block dangerous pattern</option>
-                            <option value="PERMIT">PERMIT - Allow after validation</option>
-                            <option value="HALT">HALT - Stop on violation</option>
-                        </select>
-
-                        <div class="section-label">Security Gate</div>
-                        <select id="gate-select" onchange="updateCommand()">
-                            <option value="">-- none --</option>
-                            <optgroup label="Memory Safety (C)">
-                                <option value="UAF-001">UAF-001: Use-after-free</option>
-                                <option value="DF-001">DF-001: Double-free</option>
-                                <option value="BOF-001">BOF-001: Buffer overflow</option>
-                                <option value="BOF-002">BOF-002: Out-of-bounds</option>
-                                <option value="NULL-001">NULL-001: Null dereference</option>
-                            </optgroup>
-                            <optgroup label="Integer Safety (C)">
-                                <option value="INT-001">INT-001: Allocation overflow</option>
-                                <option value="INT-002">INT-002: Arithmetic overflow</option>
-                                <option value="REF-001">REF-001: Refcount overflow</option>
-                            </optgroup>
-                            <optgroup label="Injection (Python)">
-                                <option value="INJ-001">INJ-001: Code injection (eval)</option>
-                                <option value="INJ-002">INJ-002: Command injection</option>
-                                <option value="INJ-003">INJ-003: SQL injection</option>
-                            </optgroup>
-                            <optgroup label="Deserialization (Python)">
-                                <option value="DESER-001">DESER-001: Unsafe pickle/yaml</option>
-                                <option value="PATH-001">PATH-001: Path traversal</option>
-                            </optgroup>
-                            <optgroup label="Crypto">
-                                <option value="CRYPT-001">CRYPT-001: Weak crypto</option>
-                                <option value="CRYPT-002">CRYPT-002: Insecure random</option>
-                            </optgroup>
-                        </select>
-
-                        <div class="section-label">Gate State</div>
-                        <div class="gate-display">
-                            <div class="gate-state gate-z" onclick="setGateState('Z')" title="Z = Skip (not applicable)">Z</div>
-                            <div class="gate-state gate-x" onclick="setGateState('X')" title="X = Unknown (needs check)">X</div>
-                            <div class="gate-state gate-0" onclick="setGateState('0')" title="0 = Deny">0</div>
-                            <div class="gate-state gate-1 active" onclick="setGateState('1')" title="1 = Allow">1</div>
-                        </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <div class="header-title" id="view-title">Dashboard</div>
+                <div class="header-actions">
+                    <div class="lang-toggle">
+                        <button class="lang-btn active" data-lang="c" onclick="setLang('c')">C</button>
+                        <button class="lang-btn" data-lang="python" onclick="setLang('python')">PY</button>
+                        <button class="lang-btn" data-lang="terraform" onclick="setLang('terraform')">TF</button>
+                        <button class="lang-btn" data-lang="kubernetes" onclick="setLang('kubernetes')">K8s</button>
+                        <button class="lang-btn" data-lang="docker" onclick="setLang('docker')">Docker</button>
                     </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">
-                        Command Builder
-                        <button class="copy-btn" onclick="copyCommand()">COPY</button>
-                    </div>
-                    <div class="panel-content">
-                        <div class="command-preview" id="command-preview">
-                            <span class="placeholder">Build your ExcLisp command...</span>
-                        </div>
-
-                        <div class="section-label">Mechanism [MECH]</div>
-                        <input type="text" id="mech-input" placeholder="predicate; condition -> action" oninput="updateCommand()">
-                        <div class="symbol-grid">
-                            <button class="symbol-btn" onclick="insertSymbol('→')">→</button>
-                            <button class="symbol-btn" onclick="insertSymbol('⇒')">⇒</button>
-                            <button class="symbol-btn" onclick="insertSymbol('∧')">∧</button>
-                            <button class="symbol-btn" onclick="insertSymbol('∨')">∨</button>
-                            <button class="symbol-btn" onclick="insertSymbol('¬')">¬</button>
-                            <button class="symbol-btn" onclick="insertSymbol('; ')">;</button>
-                            <button class="symbol-btn" onclick="insertSymbol(' AS ')">AS</button>
-                            <button class="symbol-btn" onclick="insertSymbol(' IS ')">IS</button>
-                            <button class="symbol-btn" onclick="insertSymbol('ptr')">ptr</button>
-                            <button class="symbol-btn" onclick="insertSymbol('idx')">idx</button>
-                            <button class="symbol-btn" onclick="insertSymbol('len')">len</button>
-                            <button class="symbol-btn" onclick="insertSymbol('nullptr')">nullptr</button>
-                        </div>
-
-                        <div class="section-label">NIST Controls</div>
-                        <div class="symbol-grid">
-                            <button class="symbol-btn nist-ctrl" data-ctrl="SI-16" onclick="toggleNIST(this)">SI-16</button>
-                            <button class="symbol-btn nist-ctrl" data-ctrl="SI-10" onclick="toggleNIST(this)">SI-10</button>
-                            <button class="symbol-btn nist-ctrl" data-ctrl="SC-13" onclick="toggleNIST(this)">SC-13</button>
-                            <button class="symbol-btn nist-ctrl" data-ctrl="AC-3" onclick="toggleNIST(this)">AC-3</button>
-                            <button class="symbol-btn nist-ctrl" data-ctrl="SC-5" onclick="toggleNIST(this)">SC-5</button>
-                            <button class="symbol-btn nist-ctrl" data-ctrl="IA-5" onclick="toggleNIST(this)">IA-5</button>
-                        </div>
-
-                        <div class="section-label">Context (optional)</div>
-                        <textarea class="context-input" id="context-input" placeholder="Add code context..." oninput="updateCommand()"></textarea>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">Quick Commands</div>
-                    <div class="panel-content">
-                        <div class="quick-cmd" onclick="loadQuick('analyze-uaf')">
-                            <div class="quick-title">{AI}::memory(ANALYZE)[UAF-001]</div>
-                            <div class="quick-desc">Analyze for use-after-free</div>
-                        </div>
-                        <div class="quick-cmd" onclick="loadQuick('fix-bounds')">
-                            <div class="quick-title">{AI}::bounds(FIX)[BOF-002]</div>
-                            <div class="quick-desc">Add bounds checking</div>
-                        </div>
-                        <div class="quick-cmd" onclick="loadQuick('protect-overflow')">
-                            <div class="quick-title">{AI}::overflow(PROTECT)[INT-002]</div>
-                            <div class="quick-desc">Add overflow protection</div>
-                        </div>
-                        <div class="quick-cmd" onclick="loadQuick('fix-injection')">
-                            <div class="quick-title">{AI}::injection(FIX)[INJ-001]</div>
-                            <div class="quick-desc">Fix eval/exec injection</div>
-                        </div>
-                        <div class="quick-cmd" onclick="loadQuick('fix-sql')">
-                            <div class="quick-title">{AI}::injection(FIX)[INJ-003]</div>
-                            <div class="quick-desc">Fix SQL injection</div>
-                        </div>
-                        <div class="quick-cmd" onclick="loadQuick('full-audit')">
-                            <div class="quick-title">{AI}::security(ANALYZE)[*; NIST]</div>
-                            <div class="quick-desc">Full security audit</div>
-                        </div>
-
-                        <div class="section-label" style="margin-top: 1rem;">ExcLisp Grammar</div>
-                        <div class="grammar-box">
-<pre>GRAMMAR: {AUTH}::DOMAIN(OP)[MECH]
-
-AUTH:   HUMAN | AI | SYSTEM | *
-DOMAIN: code | security | memory | bounds
-OP:     ANALYZE | PROTECT | VALIDATE | FIX
-
-GATE SEMANTICS:
-  condition AS result  (Pass 1: speculative)
-  condition IS result  (Pass 2: ground truth)
-
-GATE STATES:
-  Z = Skip    X = Unknown
-  0 = Deny    1 = Allow</pre>
-                        </div>
-                    </div>
+                    <button class="btn" onclick="exportSARIF()">Export SARIF</button>
+                    <button class="btn" onclick="exportJSON()">Export JSON</button>
                 </div>
             </div>
-        </div>
 
-        <!-- Tab: Gate Reference -->
-        <div class="tab-content" id="tab-reference">
-            <div class="grid">
-                <div class="panel">
-                    <div class="panel-header">C Security Gates</div>
-                    <div class="panel-content" id="c-gates-ref"></div>
+            <div class="content-area">
+                <!-- Dashboard View -->
+                <div class="view active" id="view-dashboard">
+                    <div class="risk-score" id="risk-score">
+                        <div class="risk-circle low" id="risk-circle">0</div>
+                        <div class="risk-details">
+                            <div class="risk-title">Risk Score</div>
+                            <div class="risk-subtitle" id="risk-subtitle">No code scanned yet</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-4" style="margin-bottom: 1rem;">
+                        <div class="metric-card critical">
+                            <div class="metric-value" id="metric-critical">0</div>
+                            <div class="metric-label">Critical</div>
+                        </div>
+                        <div class="metric-card high">
+                            <div class="metric-value" id="metric-high">0</div>
+                            <div class="metric-label">High</div>
+                        </div>
+                        <div class="metric-card medium">
+                            <div class="metric-value" id="metric-medium">0</div>
+                            <div class="metric-label">Medium</div>
+                        </div>
+                        <div class="metric-card low">
+                            <div class="metric-value" id="metric-low">0</div>
+                            <div class="metric-label">Low</div>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">OWASP Top 10 Coverage</div>
+                            <div class="card-body scroll" id="owasp-breakdown">
+                                <div class="empty-state">
+                                    <div class="empty-icon">🛡️</div>
+                                    <div>Scan code to see OWASP coverage</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Finding Categories</div>
+                            <div class="card-body scroll" id="category-breakdown">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📊</div>
+                                    <div>Scan code to see categories</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">Python Security Gates</div>
-                    <div class="panel-content" id="python-gates-ref"></div>
+
+                <!-- Scan View -->
+                <div class="view" id="view-scan">
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <span id="scan-lang-label">C Source Code</span>
+                                <button class="btn" onclick="pasteCode()">Paste</button>
+                            </div>
+                            <div class="card-body">
+                                <textarea class="code-editor" id="code-input" placeholder="// Paste code here..."></textarea>
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <button class="btn btn-primary" onclick="analyze()" style="flex: 1;">🔍 Analyze</button>
+                                    <button class="btn" onclick="clearCode()">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                Functions
+                                <span style="font-size: 0.55rem; color: var(--text-muted);" id="func-count"></span>
+                            </div>
+                            <div class="card-body scroll" id="functions-panel">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📁</div>
+                                    <div>Functions will appear here</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">NIST 800-53 Mapping</div>
-                    <div class="panel-content">
-                        <table class="ref-table">
-                            <tr><th>Control</th><th>Title</th><th>Gates</th></tr>
-                            <tr><td>SI-16</td><td>Memory Protection</td><td>UAF, DF, BOF, NULL, INT, REF</td></tr>
-                            <tr><td>SI-10</td><td>Input Validation</td><td>BOF, INT, INJ, PATH</td></tr>
-                            <tr><td>SC-13</td><td>Cryptographic Protection</td><td>CRYPT</td></tr>
-                            <tr><td>SC-5</td><td>DoS Protection</td><td>DOS, REGEX</td></tr>
-                            <tr><td>IA-5</td><td>Authenticator Management</td><td>HARDCODE</td></tr>
-                            <tr><td>AU-3</td><td>Audit Content</td><td>LOG</td></tr>
-                            <tr><td>AC-3</td><td>Access Enforcement</td><td>PATH, SSRF</td></tr>
-                        </table>
+
+                <!-- Findings View -->
+                <div class="view" id="view-findings">
+                    <div class="tab-bar">
+                        <button class="tab-btn active" onclick="filterFindings('all')">All</button>
+                        <button class="tab-btn" onclick="filterFindings('critical')">Critical</button>
+                        <button class="tab-btn" onclick="filterFindings('high')">High</button>
+                        <button class="tab-btn" onclick="filterFindings('medium')">Medium</button>
+                        <button class="tab-btn" onclick="filterFindings('low')">Low</button>
+                    </div>
+                    <div id="findings-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">✅</div>
+                            <div>No findings yet. Scan some code!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secrets View -->
+                <div class="view" id="view-secrets">
+                    <div class="card">
+                        <div class="card-header">Detected Secrets</div>
+                        <div class="card-body" id="secrets-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">🔐</div>
+                                <div>No secrets detected</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Flow View -->
+                <div class="view" id="view-dataflow">
+                    <div class="card">
+                        <div class="card-header">Taint Analysis - Data Flow Paths</div>
+                        <div class="card-body" id="dataflow-list">
+                            <div class="empty-state">
+                                <div class="empty-icon">🔀</div>
+                                <div>Data flow analysis will appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ExcLisp Composer View -->
+                <div class="view" id="view-composer">
+                    <div class="grid-3">
+                        <div class="card">
+                            <div class="card-header">Build Command</div>
+                            <div class="card-body">
+                                <label style="font-size: 0.65rem; color: var(--text-muted);">Authority</label>
+                                <select id="auth-select" onchange="updateCommand()" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-size: 0.75rem;">
+                                    <option value="AI">AI</option>
+                                    <option value="HUMAN">HUMAN</option>
+                                    <option value="SYSTEM">SYSTEM</option>
+                                </select>
+
+                                <label style="font-size: 0.65rem; color: var(--text-muted);">Domain</label>
+                                <select id="domain-select" onchange="updateCommand()" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-size: 0.75rem;">
+                                    <option value="security">security</option>
+                                    <option value="memory">memory</option>
+                                    <option value="bounds">bounds</option>
+                                    <option value="injection">injection</option>
+                                    <option value="crypto">crypto</option>
+                                </select>
+
+                                <label style="font-size: 0.65rem; color: var(--text-muted);">Operation</label>
+                                <select id="op-select" onchange="updateCommand()" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-size: 0.75rem;">
+                                    <option value="ANALYZE">ANALYZE</option>
+                                    <option value="FIX">FIX</option>
+                                    <option value="PROTECT">PROTECT</option>
+                                    <option value="VALIDATE">VALIDATE</option>
+                                </select>
+
+                                <label style="font-size: 0.65rem; color: var(--text-muted);">Gate</label>
+                                <select id="gate-select" onchange="updateCommand()" style="width: 100%; margin-bottom: 0.5rem; padding: 0.4rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-size: 0.75rem;">
+                                    <option value="">-- none --</option>
+                                    <option value="UAF-001">UAF-001</option>
+                                    <option value="BOF-002">BOF-002</option>
+                                    <option value="INT-002">INT-002</option>
+                                    <option value="INJ-001">INJ-001</option>
+                                    <option value="INJ-003">INJ-003</option>
+                                    <option value="SEC-001">SEC-001</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                Command Preview
+                                <button class="btn" onclick="copyCommand()">Copy</button>
+                            </div>
+                            <div class="card-body">
+                                <div id="command-preview" style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; min-height: 80px;">
+                                    <span style="color: #f472b6;">{AI}</span><span style="color: #60a5fa;">::security</span><span style="color: #4ade80;">(ANALYZE)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Quick Commands</div>
+                            <div class="card-body scroll">
+                                <div class="quick-cmd" onclick="loadQuick('uaf')">{AI}::memory(FIX)[UAF-001]</div>
+                                <div class="quick-cmd" onclick="loadQuick('bounds')">{AI}::bounds(PROTECT)[BOF-002]</div>
+                                <div class="quick-cmd" onclick="loadQuick('sql')">{AI}::injection(FIX)[INJ-003]</div>
+                                <div class="quick-cmd" onclick="loadQuick('secrets')">{SYSTEM}::security(DENY)[SEC-001]</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reference View -->
+                <div class="view" id="view-reference">
+                    <div class="grid-3">
+                        <div class="card">
+                            <div class="card-header">C / Memory Safety Gates</div>
+                            <div class="card-body scroll" id="c-gates-ref"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Python / Injection Gates</div>
+                            <div class="card-body scroll" id="py-gates-ref"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">IaC / Config Gates</div>
+                            <div class="card-body scroll" id="iac-gates-ref"></div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <style>
+        .quick-cmd {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin-bottom: 0.3rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--accent);
+            cursor: pointer;
+        }
+        .quick-cmd:hover { border-color: var(--accent); }
+    </style>
+
     <script>
         // ============================================================
-        // SECURITY GATES DEFINITION
+        // SECURITY GATES
         // ============================================================
-        const cGates = {
-            'UAF-001': { desc: 'Use-after-free', cwe: 'CWE-416', nist: 'SI-16', color: '#f87171', patterns: ['free(', 'delete '] },
-            'DF-001': { desc: 'Double-free risk', cwe: 'CWE-415', nist: 'SI-16', color: '#f87171', patterns: ['free(', 'delete '] },
-            'BOF-001': { desc: 'Stack buffer overflow', cwe: 'CWE-121', nist: 'SI-16', color: '#f87171', patterns: ['strcpy(', 'strcat(', 'gets(', 'sprintf('] },
-            'BOF-002': { desc: 'Out-of-bounds access', cwe: 'CWE-125', nist: 'SI-16', color: '#f87171', patterns: ['['] },
-            'NULL-001': { desc: 'Null dereference risk', cwe: 'CWE-476', nist: 'SI-16', color: '#fbbf24', patterns: ['!ptr', '== NULL', '== nullptr', '!= NULL'] },
-            'NULL-002': { desc: 'Unchecked allocation', cwe: 'CWE-476', nist: 'SI-16', color: '#fbbf24', patterns: ['malloc(', 'calloc(', 'realloc('] },
-            'INT-001': { desc: 'Allocation size overflow', cwe: 'CWE-190', nist: 'SI-16', color: '#fbbf24', patterns: ['malloc(', 'calloc(', '* sizeof'] },
-            'INT-002': { desc: 'Integer overflow', cwe: 'CWE-190', nist: 'SI-16', color: '#fbbf24', patterns: ['++', '--', '+= ', '-= ', '*= '] },
-            'REF-001': { desc: 'Refcount overflow', cwe: 'CWE-190', nist: 'SI-16', color: '#f87171', patterns: ['ref_count', 'refcount', 'incref', 'decref'] },
-            'DOS-001': { desc: 'Unbounded allocation', cwe: 'CWE-400', nist: 'SC-5', color: '#fbbf24', patterns: ['malloc(', 'calloc(', 'realloc('] },
-            'FMT-001': { desc: 'Format string vulnerability', cwe: 'CWE-134', nist: 'SI-10', color: '#f87171', patterns: ['printf(', 'sprintf(', 'fprintf(', 'snprintf('] }
+        const gates = {
+            c: {
+                'UAF-001': { desc: 'Use-after-free', cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: ['free('] },
+                'DF-001': { desc: 'Double-free', cwe: 'CWE-415', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: ['free('] },
+                'BOF-001': { desc: 'Stack buffer overflow', cwe: 'CWE-121', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: ['strcpy(', 'strcat(', 'gets(', 'sprintf('] },
+                'BOF-002': { desc: 'Out-of-bounds access', cwe: 'CWE-125', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['['] },
+                'NULL-001': { desc: 'Null dereference', cwe: 'CWE-476', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['!ptr', '== NULL'] },
+                'NULL-002': { desc: 'Unchecked allocation', cwe: 'CWE-476', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['malloc(', 'calloc('] },
+                'INT-001': { desc: 'Integer overflow in allocation', cwe: 'CWE-190', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['* sizeof'] },
+                'INT-002': { desc: 'Integer overflow', cwe: 'CWE-190', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['++', '+='] },
+                'FMT-001': { desc: 'Format string vulnerability', cwe: 'CWE-134', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['printf(user', 'sprintf(buf, user'] }
+            },
+            python: {
+                'INJ-001': { desc: 'Code injection (eval/exec)', cwe: 'CWE-94', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['eval(', 'exec('] },
+                'INJ-002': { desc: 'Command injection', cwe: 'CWE-78', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['os.system(', 'shell=True'] },
+                'INJ-003': { desc: 'SQL injection', cwe: 'CWE-89', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['execute(', '.format(', "f'SELECT", 'f"SELECT'] },
+                'DESER-001': { desc: 'Unsafe deserialization', cwe: 'CWE-502', owasp: 'A08', nist: 'SI-10', severity: 'CRITICAL', patterns: ['pickle.load', 'yaml.load('] },
+                'PATH-001': { desc: 'Path traversal', cwe: 'CWE-22', owasp: 'A01', nist: 'AC-3', severity: 'HIGH', patterns: ['open(', '../'] },
+                'CRYPT-001': { desc: 'Weak cryptography', cwe: 'CWE-327', owasp: 'A02', nist: 'SC-13', severity: 'MEDIUM', patterns: ['md5(', 'sha1('] },
+                'CRYPT-002': { desc: 'Insecure random', cwe: 'CWE-330', owasp: 'A02', nist: 'SC-13', severity: 'MEDIUM', patterns: ['random.randint', 'random.choice'] },
+                'SSRF-001': { desc: 'Server-side request forgery', cwe: 'CWE-918', owasp: 'A10', nist: 'AC-3', severity: 'HIGH', patterns: ['requests.get(', 'urllib'] }
+            },
+            terraform: {
+                'TF-001': { desc: 'Public S3 bucket', cwe: 'CWE-284', owasp: 'A01', nist: 'AC-3', severity: 'CRITICAL', patterns: ['acl = "public-read"', 'acl = "public-read-write"'] },
+                'TF-002': { desc: 'Unencrypted storage', cwe: 'CWE-311', owasp: 'A02', nist: 'SC-13', severity: 'HIGH', patterns: ['encrypted = false'] },
+                'TF-003': { desc: 'Overly permissive IAM', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'CRITICAL', patterns: ['"Action": "*"', '"Resource": "*"', 'effect = "Allow"'] },
+                'TF-004': { desc: 'Missing logging', cwe: 'CWE-778', owasp: 'A09', nist: 'AU-2', severity: 'MEDIUM', patterns: ['logging {', 'access_logs'] },
+                'TF-005': { desc: 'Open security group', cwe: 'CWE-284', owasp: 'A01', nist: 'AC-3', severity: 'CRITICAL', patterns: ['0.0.0.0/0', '::/0', 'cidr_blocks = ["0.0.0.0/0"]'] }
+            },
+            kubernetes: {
+                'K8S-001': { desc: 'Privileged container', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'CRITICAL', patterns: ['privileged: true'] },
+                'K8S-002': { desc: 'Run as root', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'HIGH', patterns: ['runAsUser: 0', 'runAsNonRoot: false'] },
+                'K8S-003': { desc: 'Host network enabled', cwe: 'CWE-284', owasp: 'A01', nist: 'AC-3', severity: 'HIGH', patterns: ['hostNetwork: true'] },
+                'K8S-004': { desc: 'No resource limits', cwe: 'CWE-400', owasp: 'A05', nist: 'SC-5', severity: 'MEDIUM', patterns: ['resources:'] },
+                'K8S-005': { desc: 'Secret in env var', cwe: 'CWE-798', owasp: 'A07', nist: 'IA-5', severity: 'HIGH', patterns: ['valueFrom:', 'secretKeyRef:'] }
+            },
+            docker: {
+                'DOCKER-001': { desc: 'Run as root', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'HIGH', patterns: ['USER root', 'FROM.*:latest'] },
+                'DOCKER-002': { desc: 'Latest tag used', cwe: 'CWE-829', owasp: 'A06', nist: 'CM-7', severity: 'MEDIUM', patterns: [':latest'] },
+                'DOCKER-003': { desc: 'ADD instead of COPY', cwe: 'CWE-829', owasp: 'A08', nist: 'SI-10', severity: 'LOW', patterns: ['ADD http', 'ADD *.tar'] },
+                'DOCKER-004': { desc: 'Hardcoded secret', cwe: 'CWE-798', owasp: 'A07', nist: 'IA-5', severity: 'CRITICAL', patterns: ['ENV.*PASSWORD', 'ENV.*SECRET', 'ENV.*KEY='] }
+            }
         };
 
-        const pythonGates = {
-            'INJ-001': { desc: 'Code injection (eval/exec)', cwe: 'CWE-94', nist: 'SI-10', color: '#f87171', patterns: ['eval(', 'exec(', 'compile('] },
-            'INJ-002': { desc: 'Command injection', cwe: 'CWE-78', nist: 'SI-10', color: '#f87171', patterns: ['os.system(', 'subprocess.call(', 'subprocess.run(', 'subprocess.Popen(', 'shell=True'] },
-            'INJ-003': { desc: 'SQL injection', cwe: 'CWE-89', nist: 'SI-10', color: '#f87171', patterns: ['cursor.execute(', 'execute(', '.format(', '% (', "f'SELECT", 'f"SELECT'] },
-            'PATH-001': { desc: 'Path traversal', cwe: 'CWE-22', nist: 'AC-3', color: '#f87171', patterns: ['open(', 'os.path.join(', 'pathlib', '../', '..\\'] },
-            'DESER-001': { desc: 'Unsafe deserialization', cwe: 'CWE-502', nist: 'SI-10', color: '#f87171', patterns: ['pickle.load', 'pickle.loads', 'yaml.load(', 'yaml.unsafe_load'] },
-            'DESER-002': { desc: 'Marshal/shelve deserialization', cwe: 'CWE-502', nist: 'SI-10', color: '#f87171', patterns: ['marshal.load', 'shelve.open'] },
-            'CRYPT-001': { desc: 'Weak cryptography', cwe: 'CWE-327', nist: 'SC-13', color: '#fbbf24', patterns: ['md5(', 'sha1(', 'DES', 'RC4', 'Blowfish'] },
-            'CRYPT-002': { desc: 'Insecure randomness', cwe: 'CWE-330', nist: 'SC-13', color: '#fbbf24', patterns: ['random.randint', 'random.choice', 'random.random'] },
-            'SSRF-001': { desc: 'Server-side request forgery', cwe: 'CWE-918', nist: 'AC-3', color: '#f87171', patterns: ['requests.get(', 'requests.post(', 'urllib.request.urlopen'] },
-            'XXE-001': { desc: 'XML external entity', cwe: 'CWE-611', nist: 'SI-10', color: '#f87171', patterns: ['xml.etree', 'lxml.etree', 'xml.dom', 'XMLParser'] },
-            'HARDCODE-001': { desc: 'Hardcoded credentials', cwe: 'CWE-798', nist: 'IA-5', color: '#f87171', patterns: ['password =', 'passwd =', 'api_key =', 'secret =', 'token ='] },
-            'ASSERT-001': { desc: 'Assert for security', cwe: 'CWE-617', nist: 'SI-10', color: '#fbbf24', patterns: ['assert '] },
-            'TEMP-001': { desc: 'Insecure temp file', cwe: 'CWE-377', nist: 'AC-3', color: '#fbbf24', patterns: ['tempfile.mktemp', '/tmp/'] },
-            'LOG-001': { desc: 'Sensitive data in logs', cwe: 'CWE-532', nist: 'AU-3', color: '#fbbf24', patterns: ['logging.', 'logger.', 'print(password', 'print(secret'] },
-            'REGEX-001': { desc: 'ReDoS risk', cwe: 'CWE-1333', nist: 'SC-5', color: '#fbbf24', patterns: ['re.compile(', 're.match(', 're.search('] }
+        // Secret patterns
+        const secretPatterns = [
+            { type: 'AWS Access Key', pattern: /AKIA[0-9A-Z]{16}/g, severity: 'CRITICAL' },
+            { type: 'AWS Secret Key', pattern: /[A-Za-z0-9/+=]{40}/g, severity: 'CRITICAL' },
+            { type: 'GitHub Token', pattern: /gh[ps]_[A-Za-z0-9_]{36,}/g, severity: 'CRITICAL' },
+            { type: 'Generic API Key', pattern: /api[_-]?key['":\s]*['"]?[A-Za-z0-9_\-]{20,}/gi, severity: 'HIGH' },
+            { type: 'Password in Code', pattern: /password['":\s]*['"]?[A-Za-z0-9!@#$%^&*]{8,}/gi, severity: 'CRITICAL' },
+            { type: 'Private Key', pattern: /-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g, severity: 'CRITICAL' },
+            { type: 'JWT Token', pattern: /eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, severity: 'HIGH' },
+            { type: 'Slack Token', pattern: /xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}/g, severity: 'HIGH' },
+            { type: 'Generic Secret', pattern: /secret['":\s]*['"]?[A-Za-z0-9_\-]{16,}/gi, severity: 'HIGH' }
+        ];
+
+        // OWASP Top 10 2021
+        const owaspTop10 = {
+            'A01': { name: 'Broken Access Control', desc: 'Restrictions on authenticated users' },
+            'A02': { name: 'Cryptographic Failures', desc: 'Crypto-related vulnerabilities' },
+            'A03': { name: 'Injection', desc: 'SQL, NoSQL, OS, LDAP injection' },
+            'A04': { name: 'Insecure Design', desc: 'Missing or ineffective controls' },
+            'A05': { name: 'Security Misconfiguration', desc: 'Improper configuration' },
+            'A06': { name: 'Vulnerable Components', desc: 'Using known vulnerable components' },
+            'A07': { name: 'Auth Failures', desc: 'Authentication and session issues' },
+            'A08': { name: 'Data Integrity Failures', desc: 'Insecure deserialization' },
+            'A09': { name: 'Logging Failures', desc: 'Insufficient logging and monitoring' },
+            'A10': { name: 'SSRF', desc: 'Server-Side Request Forgery' }
         };
 
-        const safeIdioms = {
-            boundsCheck: /if\s*\([^)]*<[^)]*\)[^{]*\{/,
-            mallocCheck: /=\s*(malloc|calloc|realloc)[^;]+;[^}]*if\s*\(\s*!?\w+\s*\)/s,
-            freeNull: /free\s*\([^)]+\)\s*;[^;]*=\s*(NULL|nullptr)/,
-            saturationCheck: /if\s*\([^)]*<\s*(UINT32_MAX|UINT64_MAX|SIZE_MAX|INT_MAX)/,
-            paramQuery: /execute\s*\([^,]+,\s*[\[\(]/,
-            safeYaml: /yaml\.safe_load/,
-            shellFalse: /shell\s*=\s*False/,
-            secretsModule: /secrets\./,
-            envVar: /os\.environ/,
-            gateAnnotation: /@GATE:|GATE_SAFE|GATE_CHECK/
-        };
-
+        // State
         let currentLang = 'c';
-        let analysisResult = null;
-        let selectedNIST = [];
-        let currentGateState = '1';
+        let currentView = 'dashboard';
+        let analysisResults = { findings: [], secrets: [], functions: [], dataflows: [] };
 
         // ============================================================
-        // FUNCTION PARSER
+        // NAVIGATION
         // ============================================================
-        function parseFunctions(code, lang) {
-            const functions = [];
-            const lines = code.split('\n');
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+            event?.target?.closest('.nav-item')?.classList.add('active');
             
-            if (lang === 'c') {
-                // C function pattern: return_type name(params) {
-                const funcPattern = /^[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*$/;
-                const attrPattern = /^\[\[.*\]\]$/;
-                let i = 0;
-                
-                while (i < lines.length) {
-                    const line = lines[i].trim();
-                    
-                    // Skip attributes
-                    if (attrPattern.test(line)) {
-                        i++;
-                        continue;
-                    }
-                    
-                    // Check for function definition
-                    let funcMatch = line.match(funcPattern);
-                    if (!funcMatch && i + 1 < lines.length) {
-                        // Check if opening brace is on next line
-                        const combined = line;
-                        if (lines[i + 1].trim() === '{') {
-                            funcMatch = combined.match(funcPattern);
-                        }
-                    }
-                    
-                    // Also match: type name(params) {
-                    if (!funcMatch) {
-                        const inlineMatch = line.match(/^[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*\{/);
-                        if (inlineMatch) {
-                            funcMatch = inlineMatch;
-                        }
-                    }
-                    
-                    if (funcMatch) {
-                        const funcName = funcMatch[1];
-                        const startLine = i + 1;
-                        let braceCount = 0;
-                        let started = false;
-                        let funcLines = [];
-                        let j = i;
-                        
-                        // Find function body
-                        while (j < lines.length) {
-                            const l = lines[j];
-                            funcLines.push(l);
-                            
-                            for (const ch of l) {
-                                if (ch === '{') { braceCount++; started = true; }
-                                if (ch === '}') braceCount--;
-                            }
-                            
-                            if (started && braceCount === 0) break;
-                            j++;
-                        }
-                        
-                        functions.push({
-                            name: funcName,
-                            startLine: startLine,
-                            endLine: j + 1,
-                            code: funcLines.join('\n'),
-                            lines: funcLines
-                        });
-                        
-                        i = j + 1;
-                        continue;
-                    }
-                    i++;
-                }
-            } else {
-                // Python function pattern: def name(params):
-                const funcPattern = /^def\s+(\w+)\s*\([^)]*\)\s*:/;
-                let i = 0;
-                
-                while (i < lines.length) {
-                    const line = lines[i];
-                    const match = line.match(funcPattern);
-                    
-                    if (match) {
-                        const funcName = match[1];
-                        const startLine = i + 1;
-                        const indent = line.search(/\S/);
-                        let funcLines = [line];
-                        let j = i + 1;
-                        
-                        // Find function body (by indentation)
-                        while (j < lines.length) {
-                            const l = lines[j];
-                            const trimmed = l.trim();
-                            
-                            // Empty lines are part of function
-                            if (trimmed === '') {
-                                funcLines.push(l);
-                                j++;
-                                continue;
-                            }
-                            
-                            // Check indentation
-                            const currentIndent = l.search(/\S/);
-                            if (currentIndent <= indent && trimmed !== '') break;
-                            
-                            funcLines.push(l);
-                            j++;
-                        }
-                        
-                        functions.push({
-                            name: funcName,
-                            startLine: startLine,
-                            endLine: j,
-                            code: funcLines.join('\n'),
-                            lines: funcLines
-                        });
-                        
-                        i = j;
-                        continue;
-                    }
-                    i++;
-                }
-            }
+            const titles = {
+                dashboard: 'Dashboard',
+                scan: 'Scan Code',
+                findings: 'Security Findings',
+                secrets: 'Secrets Detection',
+                dataflow: 'Data Flow Analysis',
+                composer: 'ExcLisp Composer',
+                reference: 'Gate Reference'
+            };
+            document.getElementById('view-title').textContent = titles[viewId] || viewId;
+            currentView = viewId;
+        }
+
+        function setLang(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.lang-btn[data-lang="${lang}"]`).classList.add('active');
             
-            // Capture global/non-function code
-            const coveredLines = new Set();
-            functions.forEach(f => {
-                for (let i = f.startLine; i <= f.endLine; i++) {
-                    coveredLines.add(i);
-                }
-            });
+            const labels = { c: 'C Source Code', python: 'Python Code', terraform: 'Terraform', kubernetes: 'Kubernetes YAML', docker: 'Dockerfile' };
+            document.getElementById('scan-lang-label').textContent = labels[lang];
             
-            const globalLines = [];
-            const globalLineNums = [];
-            lines.forEach((line, idx) => {
-                if (!coveredLines.has(idx + 1)) {
-                    globalLines.push(line);
-                    globalLineNums.push(idx + 1);
-                }
-            });
-            
-            if (globalLines.some(l => l.trim() !== '')) {
-                functions.unshift({
-                    name: '[Global Scope]',
-                    startLine: 1,
-                    endLine: lines.length,
-                    code: globalLines.join('\n'),
-                    lines: globalLines,
-                    lineNumbers: globalLineNums,
-                    isGlobal: true
-                });
-            }
-            
-            return functions;
+            const placeholders = {
+                c: '// Paste C code here...',
+                python: '# Paste Python code here...',
+                terraform: '# Paste Terraform here...',
+                kubernetes: '# Paste K8s YAML here...',
+                docker: '# Paste Dockerfile here...'
+            };
+            document.getElementById('code-input').placeholder = placeholders[lang];
         }
 
         // ============================================================
         // ANALYSIS ENGINE
         // ============================================================
-        function analyzeFunction(func, lang) {
-            const gates = lang === 'c' ? cGates : pythonGates;
+        function analyze() {
+            const code = document.getElementById('code-input').value;
+            if (!code.trim()) return;
+
             const findings = [];
-            const lines = func.lines;
-            const baseLineNum = func.isGlobal ? 0 : func.startLine;
-            
+            const secrets = [];
+            const dataflows = [];
+            const lines = code.split('\n');
+
+            // Detect secrets
+            secretPatterns.forEach(sp => {
+                let match;
+                const regex = new RegExp(sp.pattern.source, sp.pattern.flags);
+                lines.forEach((line, idx) => {
+                    while ((match = regex.exec(line)) !== null) {
+                        secrets.push({
+                            type: sp.type,
+                            severity: sp.severity,
+                            line: idx + 1,
+                            preview: match[0].substring(0, 20) + '...',
+                            code: line.trim()
+                        });
+                    }
+                });
+            });
+
+            // Detect vulnerabilities
+            const langGates = gates[currentLang] || gates.c;
             lines.forEach((line, idx) => {
-                const lineNum = func.isGlobal ? func.lineNumbers[idx] : baseLineNum + idx;
+                const lineNum = idx + 1;
                 const trimmed = line.trim();
                 
                 // Skip comments
-                if (lang === 'c' && (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*'))) return;
-                if (lang === 'python' && trimmed.startsWith('#')) return;
-                
-                // Skip gate annotations
-                if (safeIdioms.gateAnnotation.test(line)) return;
-                
-                for (const [gateId, gate] of Object.entries(gates)) {
+                if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*')) return;
+
+                for (const [gateId, gate] of Object.entries(langGates)) {
                     for (const pattern of gate.patterns) {
                         if (line.includes(pattern)) {
-                            let severity = gate.color === '#f87171' ? 'HIGH' : 'MEDIUM';
+                            // Check for safe idioms
+                            let severity = gate.severity;
+                            const context = lines.slice(Math.max(0, idx - 5), Math.min(lines.length, idx + 5)).join('\n');
                             
-                            // Check for safe idioms within function context
-                            const funcCode = func.code;
-                            
-                            if (gateId === 'BOF-002' && safeIdioms.boundsCheck.test(funcCode)) severity = 'LOW';
-                            if (gateId === 'NULL-002' && safeIdioms.mallocCheck.test(funcCode)) severity = 'LOW';
-                            if ((gateId === 'UAF-001' || gateId === 'DF-001') && safeIdioms.freeNull.test(funcCode)) severity = 'LOW';
-                            if ((gateId === 'INT-002' || gateId === 'REF-001') && safeIdioms.saturationCheck.test(funcCode)) severity = 'LOW';
-                            if (gateId === 'INJ-003' && safeIdioms.paramQuery.test(line)) severity = 'LOW';
-                            if (gateId === 'DESER-001' && safeIdioms.safeYaml.test(line)) continue;
-                            if (gateId === 'INJ-002' && safeIdioms.shellFalse.test(funcCode)) severity = 'LOW';
-                            if (gateId === 'CRYPT-002' && safeIdioms.secretsModule.test(funcCode)) continue;
-                            if (gateId === 'HARDCODE-001' && safeIdioms.envVar.test(line)) continue;
-                            
+                            if (gateId === 'BOF-002' && /if\s*\([^)]*</.test(context)) severity = 'LOW';
+                            if (gateId === 'NULL-002' && /if\s*\(\s*!?\w+\s*\)/.test(context)) severity = 'LOW';
+                            if (gateId === 'INJ-003' && /execute\s*\([^,]+,\s*[\[\(]/.test(line)) severity = 'LOW';
+
                             findings.push({
+                                id: `${gateId}-${lineNum}`,
                                 gate: gateId,
                                 desc: gate.desc,
                                 cwe: gate.cwe,
+                                owasp: gate.owasp,
                                 nist: gate.nist,
-                                line: lineNum,
-                                localLine: idx,
-                                code: trimmed.substring(0, 50) + (trimmed.length > 50 ? '...' : ''),
                                 severity: severity,
-                                color: severity === 'HIGH' ? '#f87171' : severity === 'MEDIUM' ? '#fbbf24' : '#4ade80'
+                                line: lineNum,
+                                code: trimmed.substring(0, 80)
                             });
                             break;
                         }
                     }
                 }
             });
-            
-            return findings;
-        }
 
-        function analyze() {
-            const code = document.getElementById('code-input').value;
-            if (!code.trim()) {
-                document.getElementById('results').innerHTML = '<div class="empty-state">No code to analyze</div>';
-                return;
-            }
-
-            const functions = parseFunctions(code, currentLang);
-            const results = functions.map(func => ({
-                ...func,
-                findings: analyzeFunction(func, currentLang)
-            }));
-
-            analysisResult = results;
-            renderResults(results);
-            renderPrompts(results);
-        }
-
-        // ============================================================
-        // RENDERING
-        // ============================================================
-        function renderResults(results) {
-            const container = document.getElementById('results');
-            const countEl = document.getElementById('finding-count');
+            // Simple data flow detection
+            const sources = ['input(', 'request.', 'argv', 'getenv', 'fread', 'recv('];
+            const sinks = ['execute(', 'system(', 'eval(', 'exec(', 'printf(', 'strcpy('];
             
-            const allFindings = results.flatMap(r => r.findings);
-            const high = allFindings.filter(f => f.severity === 'HIGH').length;
-            const med = allFindings.filter(f => f.severity === 'MEDIUM').length;
-            const low = allFindings.filter(f => f.severity === 'LOW').length;
-            const funcsWithIssues = results.filter(r => r.findings.length > 0 && !r.isGlobal).length;
-            
-            // Summary
-            let html = `
-                <div class="summary">
-                    <div class="summary-card high">
-                        <div class="summary-value">${high}</div>
-                        <div class="summary-label">High</div>
-                    </div>
-                    <div class="summary-card med">
-                        <div class="summary-value">${med}</div>
-                        <div class="summary-label">Medium</div>
-                    </div>
-                    <div class="summary-card low">
-                        <div class="summary-value">${low}</div>
-                        <div class="summary-label">Low</div>
-                    </div>
-                    <div class="summary-card funcs">
-                        <div class="summary-value">${results.filter(r => !r.isGlobal).length}</div>
-                        <div class="summary-label">Functions</div>
-                    </div>
-                </div>
-            `;
-            
-            countEl.textContent = `${allFindings.length} findings in ${results.length} blocks`;
-            
-            // Function blocks
-            results.forEach((func, fidx) => {
-                const fHigh = func.findings.filter(f => f.severity === 'HIGH').length;
-                const fMed = func.findings.filter(f => f.severity === 'MEDIUM').length;
-                const fLow = func.findings.filter(f => f.severity === 'LOW').length;
-                
-                let badge = '';
-                if (fHigh > 0) badge = `<span class="func-badge badge-high">${fHigh} HIGH</span>`;
-                else if (fMed > 0) badge = `<span class="func-badge badge-med">${fMed} MED</span>`;
-                else if (fLow > 0) badge = `<span class="func-badge badge-low">${fLow} LOW</span>`;
-                else badge = `<span class="func-badge badge-clean">CLEAN</span>`;
-                
-                const findingLines = new Set(func.findings.map(f => f.localLine));
-                const findingSeverities = {};
-                func.findings.forEach(f => {
-                    if (!findingSeverities[f.localLine] || f.severity === 'HIGH') {
-                        findingSeverities[f.localLine] = f.severity;
+            sources.forEach(source => {
+                lines.forEach((line, idx) => {
+                    if (line.includes(source)) {
+                        sinks.forEach(sink => {
+                            for (let i = idx; i < Math.min(idx + 20, lines.length); i++) {
+                                if (lines[i].includes(sink)) {
+                                    dataflows.push({
+                                        source: { line: idx + 1, code: line.trim(), type: source },
+                                        sink: { line: i + 1, code: lines[i].trim(), type: sink }
+                                    });
+                                }
+                            }
+                        });
                     }
                 });
+            });
+
+            // Parse functions
+            const functions = parseFunctions(code);
+
+            analysisResults = { findings, secrets, dataflows, functions };
+            updateUI();
+        }
+
+        function parseFunctions(code) {
+            const functions = [];
+            const lines = code.split('\n');
+            
+            if (currentLang === 'c') {
+                const funcRegex = /^[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*\{?$/;
+                let i = 0;
+                while (i < lines.length) {
+                    const match = lines[i].match(funcRegex);
+                    if (match) {
+                        const name = match[1];
+                        const start = i;
+                        let braceCount = 0;
+                        let started = false;
+                        let funcLines = [];
+                        
+                        while (i < lines.length) {
+                            funcLines.push(lines[i]);
+                            for (const ch of lines[i]) {
+                                if (ch === '{') { braceCount++; started = true; }
+                                if (ch === '}') braceCount--;
+                            }
+                            if (started && braceCount === 0) break;
+                            i++;
+                        }
+                        
+                        functions.push({ name, startLine: start + 1, endLine: i + 1, lines: funcLines });
+                    }
+                    i++;
+                }
+            } else if (currentLang === 'python') {
+                const funcRegex = /^def\s+(\w+)\s*\(/;
+                let i = 0;
+                while (i < lines.length) {
+                    const match = lines[i].match(funcRegex);
+                    if (match) {
+                        const name = match[1];
+                        const start = i;
+                        const indent = lines[i].search(/\S/);
+                        let funcLines = [lines[i]];
+                        i++;
+                        while (i < lines.length && (lines[i].trim() === '' || lines[i].search(/\S/) > indent)) {
+                            funcLines.push(lines[i]);
+                            i++;
+                        }
+                        functions.push({ name, startLine: start + 1, endLine: i, lines: funcLines });
+                        continue;
+                    }
+                    i++;
+                }
+            }
+            
+            return functions;
+        }
+
+        // ============================================================
+        // UI UPDATES
+        // ============================================================
+        function updateUI() {
+            const { findings, secrets, dataflows, functions } = analysisResults;
+            
+            // Update nav badges
+            document.getElementById('nav-findings-count').textContent = findings.length;
+            document.getElementById('nav-secrets-count').textContent = secrets.length;
+
+            // Update metrics
+            const critical = findings.filter(f => f.severity === 'CRITICAL').length;
+            const high = findings.filter(f => f.severity === 'HIGH').length;
+            const medium = findings.filter(f => f.severity === 'MEDIUM').length;
+            const low = findings.filter(f => f.severity === 'LOW').length;
+
+            document.getElementById('metric-critical').textContent = critical;
+            document.getElementById('metric-high').textContent = high;
+            document.getElementById('metric-medium').textContent = medium;
+            document.getElementById('metric-low').textContent = low;
+
+            // Risk score
+            const riskScore = Math.min(100, critical * 25 + high * 10 + medium * 3 + low + secrets.length * 15);
+            const riskCircle = document.getElementById('risk-circle');
+            const riskSubtitle = document.getElementById('risk-subtitle');
+            
+            riskCircle.textContent = riskScore;
+            riskCircle.className = 'risk-circle ' + (riskScore >= 75 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low');
+            riskSubtitle.textContent = `${findings.length} findings, ${secrets.length} secrets detected`;
+
+            // OWASP breakdown
+            const owaspCounts = {};
+            findings.forEach(f => {
+                owaspCounts[f.owasp] = (owaspCounts[f.owasp] || 0) + 1;
+            });
+
+            document.getElementById('owasp-breakdown').innerHTML = Object.entries(owaspTop10)
+                .map(([id, info]) => `
+                    <div class="owasp-item">
+                        <div class="owasp-rank">${id.substring(1)}</div>
+                        <div class="owasp-info">
+                            <div class="owasp-name">${info.name}</div>
+                            <div class="owasp-desc">${info.desc}</div>
+                        </div>
+                        <div class="owasp-count" style="color: ${owaspCounts[id] ? 'var(--error)' : 'var(--text-muted)'}">${owaspCounts[id] || 0}</div>
+                    </div>
+                `).join('');
+
+            // Category breakdown
+            const catCounts = {};
+            findings.forEach(f => {
+                const cat = f.gate.split('-')[0];
+                catCounts[cat] = (catCounts[cat] || 0) + 1;
+            });
+
+            document.getElementById('category-breakdown').innerHTML = Object.entries(catCounts)
+                .sort((a, b) => b[1] - a[1])
+                .map(([cat, count]) => `
+                    <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border);">
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">${cat}</span>
+                        <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent);">${count}</span>
+                    </div>
+                `).join('') || '<div class="empty-state">No categories</div>';
+
+            // Findings list
+            renderFindings(findings);
+
+            // Secrets list
+            document.getElementById('secrets-list').innerHTML = secrets.length ? secrets.map(s => `
+                <div class="secret-item">
+                    <div class="secret-icon">🔑</div>
+                    <div class="secret-info">
+                        <div class="secret-type">${s.type}</div>
+                        <div class="secret-location">Line ${s.line}</div>
+                    </div>
+                    <div class="secret-preview">${escapeHtml(s.preview)}</div>
+                    <span class="finding-severity ${s.severity.toLowerCase()}">${s.severity}</span>
+                </div>
+            `).join('') : '<div class="empty-state"><div class="empty-icon">🔐</div><div>No secrets detected</div></div>';
+
+            // Data flow list
+            document.getElementById('dataflow-list').innerHTML = dataflows.length ? dataflows.map(df => `
+                <div class="dataflow-container">
+                    <div class="dataflow-path">
+                        <div class="dataflow-node tainted">SOURCE: ${escapeHtml(df.source.type)} (L${df.source.line})</div>
+                        <span class="dataflow-arrow">→</span>
+                        <div class="dataflow-node tainted">SINK: ${escapeHtml(df.sink.type)} (L${df.sink.line})</div>
+                    </div>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        Untrusted data flows from line ${df.source.line} to dangerous sink at line ${df.sink.line}
+                    </div>
+                </div>
+            `).join('') : '<div class="empty-state"><div class="empty-icon">🔀</div><div>No tainted data flows detected</div></div>';
+
+            // Functions panel
+            document.getElementById('func-count').textContent = `${functions.length} functions`;
+            document.getElementById('functions-panel').innerHTML = functions.length ? functions.map((f, idx) => {
+                const funcFindings = findings.filter(fd => fd.line >= f.startLine && fd.line <= f.endLine);
+                const hasCritical = funcFindings.some(fd => fd.severity === 'CRITICAL');
+                const hasHigh = funcFindings.some(fd => fd.severity === 'HIGH');
                 
-                html += `
-                    <div class="func-block ${func.findings.length > 0 ? 'expanded' : ''}" data-idx="${fidx}">
-                        <div class="func-header" onclick="toggleFunc(${fidx})">
-                            <div class="func-name">${escapeHtml(func.name)}</div>
-                            <div class="func-meta">
-                                <span class="func-lines">L${func.startLine}-${func.endLine}</span>
-                                ${badge}
-                                <span class="func-chevron">▶</span>
+                return `
+                    <div class="func-block" data-idx="${idx}">
+                        <div class="func-header" onclick="toggleFunc(${idx})">
+                            <div class="func-name">${escapeHtml(f.name)}</div>
+                            <div class="func-badges">
+                                ${hasCritical ? '<span class="func-badge" style="background: var(--critical); color: white;">CRIT</span>' : ''}
+                                ${hasHigh && !hasCritical ? '<span class="func-badge" style="background: var(--error); color: white;">HIGH</span>' : ''}
+                                ${!hasCritical && !hasHigh && funcFindings.length ? '<span class="func-badge" style="background: var(--warning); color: black;">WARN</span>' : ''}
+                                ${!funcFindings.length ? '<span class="func-badge" style="background: var(--success); color: black;">OK</span>' : ''}
+                                <span style="font-size: 0.55rem; color: var(--text-muted);">L${f.startLine}-${f.endLine}</span>
                             </div>
                         </div>
                         <div class="func-body">
-                            <div class="func-code">
-                                ${func.lines.map((line, lidx) => {
-                                    const lineNum = func.isGlobal ? func.lineNumbers[lidx] : func.startLine + lidx;
-                                    const hasFinding = findingLines.has(lidx);
-                                    const sev = findingSeverities[lidx];
-                                    let lineClass = 'line';
-                                    if (hasFinding) {
-                                        lineClass += sev === 'HIGH' ? ' has-finding' : sev === 'MEDIUM' ? ' has-finding-med' : ' has-finding-low';
-                                    }
-                                    return `<div class="${lineClass}"><span class="line-num">${lineNum}</span><span class="line-content">${escapeHtml(line)}</span></div>`;
-                                }).join('')}
-                            </div>
-                            ${func.findings.length > 0 ? `
-                                <div class="func-findings">
-                                    ${func.findings.map(f => `
-                                        <div class="finding ${f.severity.toLowerCase()}">
-                                            <div class="finding-header">
-                                                <span class="finding-id" style="color: ${f.color}">${f.gate}</span>
-                                                <span class="finding-severity ${f.severity.toLowerCase()}">${f.severity}</span>
-                                            </div>
-                                            <div class="finding-desc">${f.desc}</div>
-                                            <div class="finding-line">Line ${f.line}: ${escapeHtml(f.code)}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : '<div style="color: var(--success); font-size: 0.75rem;">No security issues detected</div>'}
+                            <div class="func-code">${f.lines.map((line, i) => {
+                                const lineNum = f.startLine + i;
+                                const hasFinding = funcFindings.some(fd => fd.line === lineNum);
+                                return `<div class="code-line ${hasFinding ? 'line-finding' : ''}"><span class="line-num">${lineNum}</span><span class="line-content">${escapeHtml(line)}</span></div>`;
+                            }).join('')}</div>
                         </div>
                     </div>
                 `;
-            });
-            
-            container.innerHTML = html;
+            }).join('') : '<div class="empty-state"><div class="empty-icon">📁</div><div>No functions detected</div></div>';
         }
 
-        function renderPrompts(results) {
-            const container = document.getElementById('prompts');
-            const allFindings = results.flatMap(r => r.findings);
+        function renderFindings(findings, filter = 'all') {
+            const filtered = filter === 'all' ? findings : findings.filter(f => f.severity.toLowerCase() === filter);
             
-            if (allFindings.length === 0) {
-                container.innerHTML = '<div class="empty-state">No findings to generate prompts for</div>';
-                return;
-            }
-            
-            // Group by function
-            let html = '';
-            results.forEach(func => {
-                if (func.findings.length === 0) return;
-                
-                const uniqueGates = [...new Set(func.findings.map(f => f.gate))];
-                const prompts = uniqueGates.map(gate => {
-                    const f = func.findings.find(x => x.gate === gate);
-                    const fix = getFixAdvice(gate);
-                    return `{AI}::code(FIX)[${gate}; ${fix}; func:${func.name}]`;
-                });
-                
-                html += `
-                    <div class="prompt-section">
-                        <div class="prompt-section-header">${escapeHtml(func.name)}</div>
-                        ${prompts.map(p => `<div class="prompt-item" onclick="copyPrompt(this)">${escapeHtml(p)}</div>`).join('')}
+            document.getElementById('findings-list').innerHTML = filtered.length ? filtered.map(f => `
+                <div class="finding-item" onclick="this.classList.toggle('expanded')">
+                    <div class="finding-header">
+                        <span class="finding-severity ${f.severity.toLowerCase()}">${f.severity}</span>
+                        <span class="finding-title">${f.desc}</span>
+                        <span class="finding-gate">${f.gate}</span>
+                        <span class="finding-meta">Line ${f.line}</span>
                     </div>
-                `;
-            });
-            
-            container.innerHTML = html;
+                    <div class="finding-body">
+                        <div class="finding-code">${escapeHtml(f.code)}</div>
+                        <div class="finding-tags">
+                            <span class="tag cwe">${f.cwe}</span>
+                            <span class="tag owasp">OWASP ${f.owasp}</span>
+                            <span class="tag nist">NIST ${f.nist}</span>
+                        </div>
+                        <div style="margin-top: 0.75rem; font-size: 0.7rem; color: var(--text-secondary);">
+                            <strong>Remediation:</strong> ${getRemediation(f.gate)}
+                        </div>
+                    </div>
+                </div>
+            `).join('') : '<div class="empty-state"><div class="empty-icon">✅</div><div>No findings</div></div>';
         }
 
-        function getFixAdvice(gate) {
-            const advice = {
-                'UAF-001': 'set ptr = nullptr after free',
-                'DF-001': 'guard with if (ptr) before free',
-                'BOF-001': 'use strncpy/snprintf with bounds',
-                'BOF-002': 'add bounds check: if (idx < len)',
-                'NULL-001': 'check ptr before dereference',
-                'NULL-002': 'check allocation result',
-                'INT-001': 'use __builtin_mul_overflow',
-                'INT-002': 'use __builtin_add_overflow',
-                'REF-001': 'add saturation: if (rc < MAX)',
-                'INJ-001': 'use ast.literal_eval()',
-                'INJ-002': 'use subprocess with shell=False',
-                'INJ-003': 'use parameterized queries',
-                'PATH-001': 'validate and sanitize path',
-                'DESER-001': 'use yaml.safe_load()',
-                'CRYPT-001': 'use SHA-256 or better',
-                'CRYPT-002': 'use secrets module',
-                'HARDCODE-001': 'use environment variables',
-                'SSRF-001': 'validate and whitelist URLs',
-                'XXE-001': 'disable external entities',
-                'FMT-001': 'use format specifiers, not user input'
-            };
-            return advice[gate] || 'review and fix';
-        }
-
-        // ============================================================
-        // UI FUNCTIONS
-        // ============================================================
-        function toggleFunc(idx) {
-            const block = document.querySelector(`.func-block[data-idx="${idx}"]`);
-            block.classList.toggle('expanded');
-        }
-
-        function expandAll() {
-            document.querySelectorAll('.func-block').forEach(b => b.classList.add('expanded'));
-        }
-
-        function collapseAll() {
-            document.querySelectorAll('.func-block').forEach(b => b.classList.remove('expanded'));
-        }
-
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-' + tabId).classList.add('active');
+        function filterFindings(severity) {
+            document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
+            renderFindings(analysisResults.findings, severity);
         }
 
-        function setLang(lang) {
-            currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`.lang-btn.${lang === 'c' ? 'c-lang' : 'python'}`).classList.add('active');
-            document.getElementById('lang-label').textContent = lang === 'c' ? 'C Source Code' : 'Python Source Code';
-            document.getElementById('code-input').placeholder = lang === 'c' ? 
-                '// Paste C code here...' : '# Paste Python code here...';
-        }
-
-        // ============================================================
-        // EXCLISP COMPOSER
-        // ============================================================
-        function updateCommand() {
-            const auth = document.getElementById('auth-select').value;
-            const domainSelect = document.getElementById('domain-select').value;
-            const domainCustom = document.getElementById('domain-custom').value;
-            const domain = domainCustom || domainSelect;
-            const op = document.getElementById('op-select').value;
-            const gate = document.getElementById('gate-select').value;
-            const mech = document.getElementById('mech-input').value;
-            const context = document.getElementById('context-input').value;
-
-            const preview = document.getElementById('command-preview');
-            
-            if (!auth && !domain && !op) {
-                preview.innerHTML = '<span class="placeholder">Build your ExcLisp command...</span>';
-                return;
-            }
-
-            let cmd = '';
-            if (auth) cmd += `<span class="auth">{${auth}}</span>`;
-            if (domain) cmd += `<span class="domain">::${domain}</span>`;
-            if (op) cmd += `<span class="op">(${op})</span>`;
-            
-            let mechParts = [];
-            if (gate) mechParts.push(gate);
-            if (mech) mechParts.push(mech);
-            if (selectedNIST.length > 0) mechParts.push('NIST ' + selectedNIST.join(', '));
-            
-            if (mechParts.length > 0) {
-                cmd += `<span class="mech">[${mechParts.join('; ')}]</span>`;
-            }
-
-            if (context) {
-                cmd += `<br><span style="color: var(--text-muted); font-size: 0.7rem;">/* ${escapeHtml(context.substring(0, 80))}${context.length > 80 ? '...' : ''} */</span>`;
-            }
-
-            preview.innerHTML = cmd || '<span class="placeholder">Build your command...</span>';
-        }
-
-        function insertSymbol(symbol) {
-            const input = document.getElementById('mech-input');
-            const start = input.selectionStart;
-            const text = input.value;
-            input.value = text.substring(0, start) + symbol + text.substring(input.selectionEnd);
-            input.selectionStart = input.selectionEnd = start + symbol.length;
-            input.focus();
-            updateCommand();
-        }
-
-        function toggleNIST(btn) {
-            const ctrl = btn.dataset.ctrl;
-            btn.classList.toggle('selected');
-            if (btn.classList.contains('selected')) {
-                if (!selectedNIST.includes(ctrl)) selectedNIST.push(ctrl);
-            } else {
-                selectedNIST = selectedNIST.filter(c => c !== ctrl);
-            }
-            updateCommand();
-        }
-
-        function setGateState(state) {
-            currentGateState = state;
-            document.querySelectorAll('.gate-state').forEach(g => g.classList.remove('active'));
-            document.querySelector('.gate-' + state.toLowerCase()).classList.add('active');
-        }
-
-        function copyCommand() {
-            const preview = document.getElementById('command-preview');
-            const text = preview.innerText || preview.textContent;
-            navigator.clipboard.writeText(text.replace(/\n/g, ' ').trim());
-            event.target.textContent = 'COPIED!';
-            setTimeout(() => event.target.textContent = 'COPY', 1200);
-        }
-
-        const quickCommands = {
-            'analyze-uaf': { auth: 'AI', domain: 'memory', op: 'ANALYZE', gate: 'UAF-001', mech: 'free() → ptr usage' },
-            'fix-bounds': { auth: 'AI', domain: 'bounds', op: 'FIX', gate: 'BOF-002', mech: 'idx < len check' },
-            'protect-overflow': { auth: 'AI', domain: 'overflow', op: 'PROTECT', gate: 'INT-002', mech: '__builtin_*_overflow' },
-            'fix-injection': { auth: 'AI', domain: 'injection', op: 'FIX', gate: 'INJ-001', mech: 'ast.literal_eval()' },
-            'fix-sql': { auth: 'AI', domain: 'injection', op: 'FIX', gate: 'INJ-003', mech: 'parameterized query' },
-            'full-audit': { auth: 'AI', domain: 'security', op: 'ANALYZE', gate: '', mech: 'all gates; CVE mapping' }
-        };
-
-        function loadQuick(id) {
-            const qc = quickCommands[id];
-            if (!qc) return;
-            document.getElementById('auth-select').value = qc.auth;
-            document.getElementById('domain-select').value = qc.domain;
-            document.getElementById('domain-custom').value = '';
-            document.getElementById('op-select').value = qc.op;
-            document.getElementById('gate-select').value = qc.gate;
-            document.getElementById('mech-input').value = qc.mech;
-            updateCommand();
+        function getRemediation(gate) {
+            const rems = {
+                'UAF-001': 'Set pointer to NULL after free. Use RAII patterns or smart pointers.',
+                'BOF-002': 'Add bounds checking before array access. Use safe functions like strncpy.',
+                'INJ-001': 'Never use eval() with user input. Use ast.literal_eval() for safe parsing.',
+                'INJ-003': 'Use parameterized queries instead of string formatting.',
+                'SEC-001': 'Store secrets in environment variables or a secrets manager.',
+                'TF-001': 'Set acl = "private" and use bucket policies for access control.',
+                'K8S-001': 'Set privileged: false and use securityContext constraints.'
+            };
+            return rems[gate] || 'Review and apply security best practices.';
         }
 
         // ============================================================
-        // GATE REFERENCE
+        // EXPORT
         // ============================================================
-        function renderGateReference() {
-            const cContainer = document.getElementById('c-gates-ref');
-            const pyContainer = document.getElementById('python-gates-ref');
+        function exportSARIF() {
+            const sarif = {
+                "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+                "version": "2.1.0",
+                "runs": [{
+                    "tool": { "driver": { "name": "Euman Security Scanner", "version": "3.0" } },
+                    "results": analysisResults.findings.map(f => ({
+                        "ruleId": f.gate,
+                        "level": f.severity === 'CRITICAL' ? 'error' : f.severity === 'HIGH' ? 'error' : 'warning',
+                        "message": { "text": f.desc },
+                        "locations": [{ "physicalLocation": { "region": { "startLine": f.line } } }]
+                    }))
+                }]
+            };
+            download('euman-scan.sarif', JSON.stringify(sarif, null, 2));
+        }
 
-            cContainer.innerHTML = Object.entries(cGates).map(([id, g]) => `
-                <div class="gate-ref-item">
-                    <div class="gate-ref-id" style="color: ${g.color}">${id}</div>
-                    <div class="gate-ref-desc">${g.desc} (${g.cwe}) - ${g.nist}</div>
-                </div>
-            `).join('');
+        function exportJSON() {
+            download('euman-scan.json', JSON.stringify(analysisResults, null, 2));
+        }
 
-            pyContainer.innerHTML = Object.entries(pythonGates).map(([id, g]) => `
-                <div class="gate-ref-item">
-                    <div class="gate-ref-id" style="color: ${g.color}">${id}</div>
-                    <div class="gate-ref-desc">${g.desc} (${g.cwe}) - ${g.nist}</div>
-                </div>
-            `).join('');
+        function download(filename, content) {
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
         // ============================================================
-        // UTILITY FUNCTIONS
+        // UTILITIES
         // ============================================================
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -1410,29 +1316,82 @@ GATE STATES:
                 const text = await navigator.clipboard.readText();
                 document.getElementById('code-input').value = text;
             } catch (e) {
-                alert('Could not access clipboard. Please paste manually.');
+                alert('Paste manually (Ctrl+V)');
             }
         }
 
-        function copyPrompt(el) {
-            navigator.clipboard.writeText(el.textContent);
-            el.style.borderColor = 'var(--success)';
-            setTimeout(() => el.style.borderColor = '', 800);
+        function clearCode() {
+            document.getElementById('code-input').value = '';
         }
 
-        function copyAllPrompts() {
-            const prompts = document.querySelectorAll('.prompt-item');
-            const text = Array.from(prompts).map(p => p.textContent).join('\n');
+        function toggleFunc(idx) {
+            document.querySelector(`.func-block[data-idx="${idx}"]`).classList.toggle('expanded');
+        }
+
+        function updateCommand() {
+            const auth = document.getElementById('auth-select').value;
+            const domain = document.getElementById('domain-select').value;
+            const op = document.getElementById('op-select').value;
+            const gate = document.getElementById('gate-select').value;
+            
+            let cmd = `<span style="color: #f472b6;">{${auth}}</span>`;
+            cmd += `<span style="color: #60a5fa;">::${domain}</span>`;
+            cmd += `<span style="color: #4ade80;">(${op})</span>`;
+            if (gate) cmd += `<span style="color: #fbbf24;">[${gate}]</span>`;
+            
+            document.getElementById('command-preview').innerHTML = cmd;
+        }
+
+        function copyCommand() {
+            const text = document.getElementById('command-preview').textContent;
             navigator.clipboard.writeText(text);
-            event.target.textContent = 'COPIED!';
-            setTimeout(() => event.target.textContent = 'COPY ALL', 1200);
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', renderGateReference);
-    </script>
-</body>
-</html>
+        function loadQuick(type) {
+            const cmds = {
+                uaf: { auth: 'AI', domain: 'memory', op: 'FIX', gate: 'UAF-001' },
+                bounds: { auth: 'AI', domain: 'bounds', op: 'PROTECT', gate: 'BOF-002' },
+                sql: { auth: 'AI', domain: 'injection', op: 'FIX', gate: 'INJ-003' },
+                secrets: { auth: 'SYSTEM', domain: 'security', op: 'DENY', gate: 'SEC-001' }
+            };
+            const c = cmds[type];
+            document.getElementById('auth-select').value = c.auth;
+            document.getElementById('domain-select').value = c.domain;
+            document.getElementById('op-select').value = c.op;
+            document.getElementById('gate-select').value = c.gate;
+            updateCommand();
+        }
 
+        // Initialize reference
+        function initReference() {
+            document.getElementById('c-gates-ref').innerHTML = Object.entries(gates.c).map(([id, g]) => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent);">${id}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${g.desc} (${g.cwe})</div>
+                </div>
+            `).join('');
+
+            document.getElementById('py-gates-ref').innerHTML = Object.entries(gates.python).map(([id, g]) => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent);">${id}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${g.desc} (${g.cwe})</div>
+                </div>
+            `).join('');
+
+            document.getElementById('iac-gates-ref').innerHTML = [
+                ...Object.entries(gates.terraform),
+                ...Object.entries(gates.kubernetes),
+                ...Object.entries(gates.docker)
+            ].map(([id, g]) => `
+                <div style="padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent);">${id}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-secondary);">${g.desc} (${g.cwe})</div>
+                </div>
+            `).join('');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', initReference);
+    </script>
 </body>
 </html>
