@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euman Security Suite - C + Python</title>
+    <title>Euman Security Scanner v2</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -30,7 +30,7 @@
             min-height: 100vh;
             padding: 1rem;
         }
-        .container { max-width: 1600px; margin: 0 auto; }
+        .container { max-width: 1800px; margin: 0 auto; }
         header {
             border-bottom: 1px solid var(--border);
             padding-bottom: 0.75rem;
@@ -45,6 +45,16 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.2rem;
             color: var(--accent);
+        }
+        h1 span { 
+            font-size: 0.7rem; 
+            color: var(--text-muted); 
+            font-weight: 400;
+        }
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
         }
         .lang-toggle {
             display: flex;
@@ -68,12 +78,14 @@
         .lang-btn.active { color: white; }
         .lang-btn.c-lang.active { background: var(--c-lang); }
         .lang-btn.python.active { background: var(--python); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1.2fr 0.8fr; gap: 1rem; }
         .panel {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: 6px;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         .panel-header {
             background: var(--bg-tertiary);
@@ -86,146 +98,258 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
         .panel-content {
             padding: 0.75rem;
-            max-height: calc(100vh - 180px);
             overflow-y: auto;
+            flex: 1;
+            max-height: calc(100vh - 160px);
         }
         .code-input {
             width: 100%;
-            min-height: 200px;
+            min-height: 300px;
             padding: 0.75rem;
             background: var(--bg-primary);
             border: 1px solid var(--border);
             border-radius: 4px;
             color: var(--text-primary);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             resize: vertical;
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
         }
+        .code-input:focus { outline: none; border-color: var(--accent); }
         .btn {
             padding: 0.5rem 1rem;
-            background: var(--accent-dim);
+            background: var(--accent);
             border: none;
             border-radius: 4px;
-            color: var(--text-primary);
+            color: var(--bg-primary);
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.75rem;
+            font-weight: 600;
             cursor: pointer;
-            width: 100%;
-            margin-top: 0.5rem;
         }
-        .btn:hover { background: var(--accent); }
+        .btn:hover { background: var(--accent-dim); }
+        .btn-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
         .copy-btn {
-            background: var(--bg-secondary);
+            padding: 0.2rem 0.5rem;
+            background: var(--bg-primary);
             border: 1px solid var(--border);
             border-radius: 3px;
-            padding: 0.2rem 0.5rem;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.6rem;
             cursor: pointer;
         }
-        .copy-btn:hover { background: var(--accent); color: var(--bg-primary); }
-        .finding {
+        .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* Function blocks */
+        .func-block {
             background: var(--bg-tertiary);
             border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 0.6rem;
-            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
         }
-        .finding-header {
+        .func-header {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 0.4rem;
-            margin-bottom: 0.4rem;
-            flex-wrap: wrap;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            user-select: none;
         }
-        .finding-gate {
+        .func-header:hover { background: var(--bg-primary); }
+        .func-name {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            padding: 0.15rem 0.4rem;
-            border-radius: 3px;
-            color: white;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--accent);
         }
-        .severity-badge {
+        .func-meta {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .func-lines {
+            font-family: 'JetBrains Mono', monospace;
             font-size: 0.6rem;
-            padding: 0.1rem 0.35rem;
-            border-radius: 3px;
-        }
-        .severity-high { background: var(--error); color: white; }
-        .severity-medium { background: var(--warning); color: black; }
-        .severity-low { background: #64748b; color: white; }
-        .finding-line {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
             color: var(--text-muted);
         }
-        .finding-desc { font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.4rem; }
-        .finding-code {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.65rem;
-            background: var(--bg-primary);
-            padding: 0.35rem;
-            border-radius: 3px;
-            color: var(--error);
-            overflow-x: auto;
-            white-space: pre;
-        }
-        .finding-nist { font-size: 0.6rem; color: #60a5fa; margin-top: 0.35rem; }
-        .nist-badge {
-            display: inline-flex;
-            padding: 0.1rem 0.3rem;
-            background: var(--bg-primary);
-            border: 1px solid #60a5fa;
-            border-radius: 3px;
+        .func-badge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.55rem;
-            color: #60a5fa;
-            margin-right: 0.2rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-weight: 600;
         }
-        .cwe-badge { border-color: #f472b6; color: #f472b6; }
-        .stats-grid {
+        .badge-high { background: var(--error); color: white; }
+        .badge-med { background: var(--warning); color: black; }
+        .badge-low { background: var(--success); color: black; }
+        .badge-clean { background: var(--bg-primary); color: var(--success); border: 1px solid var(--success); }
+        .func-chevron {
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .func-block.expanded .func-chevron { transform: rotate(90deg); }
+        .func-body {
+            display: none;
+            padding: 0.5rem 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+        .func-block.expanded .func-body { display: block; }
+        .func-code {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            overflow-x: auto;
+            margin-bottom: 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .func-code .line {
+            display: flex;
+            line-height: 1.6;
+        }
+        .func-code .line-num {
+            color: var(--text-muted);
+            min-width: 35px;
+            text-align: right;
+            padding-right: 10px;
+            user-select: none;
+        }
+        .func-code .line-content { flex: 1; }
+        .func-code .line.has-finding { background: rgba(248, 113, 113, 0.1); }
+        .func-code .line.has-finding-med { background: rgba(251, 191, 36, 0.1); }
+        .func-code .line.has-finding-low { background: rgba(74, 222, 128, 0.1); }
+
+        /* Findings */
+        .finding {
+            background: var(--bg-primary);
+            border-left: 3px solid var(--error);
+            padding: 0.4rem 0.5rem;
+            margin-bottom: 0.3rem;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.7rem;
+        }
+        .finding.medium { border-left-color: var(--warning); }
+        .finding.low { border-left-color: var(--success); }
+        .finding-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .finding-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .finding-severity {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.5rem;
+            padding: 0.1rem 0.25rem;
+            border-radius: 2px;
+            background: var(--error);
+            color: white;
+        }
+        .finding-severity.medium { background: var(--warning); color: black; }
+        .finding-severity.low { background: var(--success); color: black; }
+        .finding-desc {
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+        .finding-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        /* Summary */
+        .summary {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 0.5rem;
             margin-bottom: 1rem;
         }
-        .stat-card {
+        .summary-card {
             background: var(--bg-tertiary);
             border: 1px solid var(--border);
             border-radius: 4px;
             padding: 0.5rem;
             text-align: center;
         }
-        .stat-value {
+        .summary-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 1.2rem;
+            font-weight: 700;
         }
-        .stat-label { font-size: 0.65rem; color: var(--text-muted); }
-        .prompt-card {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 4px;
-            padding: 0.5rem;
-            margin-bottom: 0.4rem;
+        .summary-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
         }
-        .prompt-cmd {
+        .summary-card.high .summary-value { color: var(--error); }
+        .summary-card.med .summary-value { color: var(--warning); }
+        .summary-card.low .summary-value { color: var(--success); }
+        .summary-card.funcs .summary-value { color: var(--accent); }
+
+        /* Prompts */
+        .prompt-section {
+            margin-bottom: 0.75rem;
+        }
+        .prompt-section-header {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            color: var(--accent);
+            font-size: 0.65rem;
+            color: var(--text-muted);
             margin-bottom: 0.3rem;
+            text-transform: uppercase;
+        }
+        .prompt-item {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            padding: 0.4rem 0.5rem;
+            margin-bottom: 0.25rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--accent);
+            cursor: pointer;
             word-break: break-all;
         }
-        .prompt-desc {
-            font-size: 0.65rem;
-            color: var(--text-secondary);
+        .prompt-item:hover { border-color: var(--accent); }
+
+        /* Global findings */
+        .global-section {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
         }
-        @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
-        
+        .global-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--warning);
+            margin-bottom: 0.5rem;
+        }
+
         /* Tabs */
         .tab-nav {
             display: flex;
@@ -249,8 +373,8 @@
         .tab-btn.active { background: var(--bg-tertiary); color: var(--accent); border-color: var(--border); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        /* Composer */
+
+        /* Composer styles */
         .section-label {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.6rem;
@@ -384,36 +508,41 @@
             font-size: 0.7rem;
             color: var(--text-secondary);
         }
+        textarea.context-input {
+            min-height: 60px;
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            resize: vertical;
+        }
+        textarea.context-input:focus { border-color: var(--accent); outline: none; }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 2rem;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Euman Security Suite <span style="color: var(--text-muted); font-weight: 400;">C + Python</span></h1>
-            <div class="lang-toggle">
-                <button class="lang-btn c-lang active" onclick="setLang('c')">C/C23</button>
-                <button class="lang-btn python" onclick="setLang('python')">Python</button>
+            <h1>EUMAN SECURITY SCANNER <span>v2.0 - Function Analysis</span></h1>
+            <div class="controls">
+                <div class="lang-toggle">
+                    <button class="lang-btn c-lang active" onclick="setLang('c')">C</button>
+                    <button class="lang-btn python" onclick="setLang('python')">Python</button>
+                </div>
             </div>
         </header>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--error);" id="stat-high">0</div>
-                <div class="stat-label">HIGH</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--warning);" id="stat-medium">0</div>
-                <div class="stat-label">MEDIUM</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: #64748b;" id="stat-low">0</div>
-                <div class="stat-label">LOW</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--success);" id="stat-gates">0</div>
-                <div class="stat-label">GATES</div>
-            </div>
-        </div>
 
         <!-- Tab Navigation -->
         <div class="tab-nav">
@@ -431,18 +560,22 @@
                         <button class="copy-btn" onclick="pasteCode()">PASTE</button>
                     </div>
                     <div class="panel-content">
-                        <textarea class="code-input" id="code-input" placeholder="Paste code here..."></textarea>
-                        <button class="btn" onclick="analyze()">Analyze Security</button>
+                        <textarea class="code-input" id="code-input" placeholder="// Paste C code here..."></textarea>
+                        <div class="btn-row">
+                            <button class="btn" onclick="analyze()">Analyze</button>
+                            <button class="btn btn-secondary" onclick="expandAll()">Expand All</button>
+                            <button class="btn btn-secondary" onclick="collapseAll()">Collapse All</button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="panel">
                     <div class="panel-header">
-                        Findings
+                        Function Analysis
                         <span id="finding-count" style="font-size: 0.55rem; color: var(--text-muted);"></span>
                     </div>
                     <div class="panel-content" id="results">
-                        <p style="color: var(--text-muted); font-size: 0.75rem;">Enter code and click Analyze.</p>
+                        <div class="empty-state">Enter code and click Analyze</div>
                     </div>
                 </div>
 
@@ -452,7 +585,7 @@
                         <button class="copy-btn" onclick="copyAllPrompts()">COPY ALL</button>
                     </div>
                     <div class="panel-content" id="prompts">
-                        <p style="color: var(--text-muted); font-size: 0.75rem;">Run analysis to generate prompts.</p>
+                        <div class="empty-state">Run analysis to generate prompts</div>
                     </div>
                 </div>
             </div>
@@ -576,10 +709,12 @@
                             <button class="symbol-btn nist-ctrl" data-ctrl="SI-10" onclick="toggleNIST(this)">SI-10</button>
                             <button class="symbol-btn nist-ctrl" data-ctrl="SC-13" onclick="toggleNIST(this)">SC-13</button>
                             <button class="symbol-btn nist-ctrl" data-ctrl="AC-3" onclick="toggleNIST(this)">AC-3</button>
+                            <button class="symbol-btn nist-ctrl" data-ctrl="SC-5" onclick="toggleNIST(this)">SC-5</button>
+                            <button class="symbol-btn nist-ctrl" data-ctrl="IA-5" onclick="toggleNIST(this)">IA-5</button>
                         </div>
 
                         <div class="section-label">Context (optional)</div>
-                        <textarea id="context-input" placeholder="Add code context..." oninput="updateCommand()" style="min-height: 60px; width: 100%; padding: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;"></textarea>
+                        <textarea class="context-input" id="context-input" placeholder="Add code context..." oninput="updateCommand()"></textarea>
                     </div>
                 </div>
 
@@ -587,7 +722,7 @@
                     <div class="panel-header">Quick Commands</div>
                     <div class="panel-content">
                         <div class="quick-cmd" onclick="loadQuick('analyze-uaf')">
-                            <div class="quick-title">{AI}::memory(ANALYZE)[UAF]</div>
+                            <div class="quick-title">{AI}::memory(ANALYZE)[UAF-001]</div>
                             <div class="quick-desc">Analyze for use-after-free</div>
                         </div>
                         <div class="quick-cmd" onclick="loadQuick('fix-bounds')">
@@ -624,14 +759,8 @@ GATE SEMANTICS:
   condition IS result  (Pass 2: ground truth)
 
 GATE STATES:
-  Z = Skip (not applicable)
-  X = Unknown (needs check)
-  0 = Deny (blocked)
-  1 = Allow (permitted)
-
-INVARIANT:
-  ¬complete ⇒ ∅
-  no_path ⇒ no_claim</pre>
+  Z = Skip    X = Unknown
+  0 = Deny    1 = Allow</pre>
                         </div>
                     </div>
                 </div>
@@ -654,12 +783,13 @@ INVARIANT:
                     <div class="panel-content">
                         <table class="ref-table">
                             <tr><th>Control</th><th>Title</th><th>Gates</th></tr>
-                            <tr><td>SI-16</td><td>Memory Protection</td><td>UAF, DF, BOF, NULL</td></tr>
+                            <tr><td>SI-16</td><td>Memory Protection</td><td>UAF, DF, BOF, NULL, INT, REF</td></tr>
                             <tr><td>SI-10</td><td>Input Validation</td><td>BOF, INT, INJ, PATH</td></tr>
                             <tr><td>SC-13</td><td>Cryptographic Protection</td><td>CRYPT</td></tr>
                             <tr><td>SC-5</td><td>DoS Protection</td><td>DOS, REGEX</td></tr>
                             <tr><td>IA-5</td><td>Authenticator Management</td><td>HARDCODE</td></tr>
                             <tr><td>AU-3</td><td>Audit Content</td><td>LOG</td></tr>
+                            <tr><td>AC-3</td><td>Access Enforcement</td><td>PATH, SSRF</td></tr>
                         </table>
                     </div>
                 </div>
@@ -668,14 +798,469 @@ INVARIANT:
     </div>
 
     <script>
+        // ============================================================
+        // SECURITY GATES DEFINITION
+        // ============================================================
+        const cGates = {
+            'UAF-001': { desc: 'Use-after-free', cwe: 'CWE-416', nist: 'SI-16', color: '#f87171', patterns: ['free(', 'delete '] },
+            'DF-001': { desc: 'Double-free risk', cwe: 'CWE-415', nist: 'SI-16', color: '#f87171', patterns: ['free(', 'delete '] },
+            'BOF-001': { desc: 'Stack buffer overflow', cwe: 'CWE-121', nist: 'SI-16', color: '#f87171', patterns: ['strcpy(', 'strcat(', 'gets(', 'sprintf('] },
+            'BOF-002': { desc: 'Out-of-bounds access', cwe: 'CWE-125', nist: 'SI-16', color: '#f87171', patterns: ['['] },
+            'NULL-001': { desc: 'Null dereference risk', cwe: 'CWE-476', nist: 'SI-16', color: '#fbbf24', patterns: ['!ptr', '== NULL', '== nullptr', '!= NULL'] },
+            'NULL-002': { desc: 'Unchecked allocation', cwe: 'CWE-476', nist: 'SI-16', color: '#fbbf24', patterns: ['malloc(', 'calloc(', 'realloc('] },
+            'INT-001': { desc: 'Allocation size overflow', cwe: 'CWE-190', nist: 'SI-16', color: '#fbbf24', patterns: ['malloc(', 'calloc(', '* sizeof'] },
+            'INT-002': { desc: 'Integer overflow', cwe: 'CWE-190', nist: 'SI-16', color: '#fbbf24', patterns: ['++', '--', '+= ', '-= ', '*= '] },
+            'REF-001': { desc: 'Refcount overflow', cwe: 'CWE-190', nist: 'SI-16', color: '#f87171', patterns: ['ref_count', 'refcount', 'incref', 'decref'] },
+            'DOS-001': { desc: 'Unbounded allocation', cwe: 'CWE-400', nist: 'SC-5', color: '#fbbf24', patterns: ['malloc(', 'calloc(', 'realloc('] },
+            'FMT-001': { desc: 'Format string vulnerability', cwe: 'CWE-134', nist: 'SI-10', color: '#f87171', patterns: ['printf(', 'sprintf(', 'fprintf(', 'snprintf('] }
+        };
+
+        const pythonGates = {
+            'INJ-001': { desc: 'Code injection (eval/exec)', cwe: 'CWE-94', nist: 'SI-10', color: '#f87171', patterns: ['eval(', 'exec(', 'compile('] },
+            'INJ-002': { desc: 'Command injection', cwe: 'CWE-78', nist: 'SI-10', color: '#f87171', patterns: ['os.system(', 'subprocess.call(', 'subprocess.run(', 'subprocess.Popen(', 'shell=True'] },
+            'INJ-003': { desc: 'SQL injection', cwe: 'CWE-89', nist: 'SI-10', color: '#f87171', patterns: ['cursor.execute(', 'execute(', '.format(', '% (', "f'SELECT", 'f"SELECT'] },
+            'PATH-001': { desc: 'Path traversal', cwe: 'CWE-22', nist: 'AC-3', color: '#f87171', patterns: ['open(', 'os.path.join(', 'pathlib', '../', '..\\'] },
+            'DESER-001': { desc: 'Unsafe deserialization', cwe: 'CWE-502', nist: 'SI-10', color: '#f87171', patterns: ['pickle.load', 'pickle.loads', 'yaml.load(', 'yaml.unsafe_load'] },
+            'DESER-002': { desc: 'Marshal/shelve deserialization', cwe: 'CWE-502', nist: 'SI-10', color: '#f87171', patterns: ['marshal.load', 'shelve.open'] },
+            'CRYPT-001': { desc: 'Weak cryptography', cwe: 'CWE-327', nist: 'SC-13', color: '#fbbf24', patterns: ['md5(', 'sha1(', 'DES', 'RC4', 'Blowfish'] },
+            'CRYPT-002': { desc: 'Insecure randomness', cwe: 'CWE-330', nist: 'SC-13', color: '#fbbf24', patterns: ['random.randint', 'random.choice', 'random.random'] },
+            'SSRF-001': { desc: 'Server-side request forgery', cwe: 'CWE-918', nist: 'AC-3', color: '#f87171', patterns: ['requests.get(', 'requests.post(', 'urllib.request.urlopen'] },
+            'XXE-001': { desc: 'XML external entity', cwe: 'CWE-611', nist: 'SI-10', color: '#f87171', patterns: ['xml.etree', 'lxml.etree', 'xml.dom', 'XMLParser'] },
+            'HARDCODE-001': { desc: 'Hardcoded credentials', cwe: 'CWE-798', nist: 'IA-5', color: '#f87171', patterns: ['password =', 'passwd =', 'api_key =', 'secret =', 'token ='] },
+            'ASSERT-001': { desc: 'Assert for security', cwe: 'CWE-617', nist: 'SI-10', color: '#fbbf24', patterns: ['assert '] },
+            'TEMP-001': { desc: 'Insecure temp file', cwe: 'CWE-377', nist: 'AC-3', color: '#fbbf24', patterns: ['tempfile.mktemp', '/tmp/'] },
+            'LOG-001': { desc: 'Sensitive data in logs', cwe: 'CWE-532', nist: 'AU-3', color: '#fbbf24', patterns: ['logging.', 'logger.', 'print(password', 'print(secret'] },
+            'REGEX-001': { desc: 'ReDoS risk', cwe: 'CWE-1333', nist: 'SC-5', color: '#fbbf24', patterns: ['re.compile(', 're.match(', 're.search('] }
+        };
+
+        const safeIdioms = {
+            boundsCheck: /if\s*\([^)]*<[^)]*\)[^{]*\{/,
+            mallocCheck: /=\s*(malloc|calloc|realloc)[^;]+;[^}]*if\s*\(\s*!?\w+\s*\)/s,
+            freeNull: /free\s*\([^)]+\)\s*;[^;]*=\s*(NULL|nullptr)/,
+            saturationCheck: /if\s*\([^)]*<\s*(UINT32_MAX|UINT64_MAX|SIZE_MAX|INT_MAX)/,
+            paramQuery: /execute\s*\([^,]+,\s*[\[\(]/,
+            safeYaml: /yaml\.safe_load/,
+            shellFalse: /shell\s*=\s*False/,
+            secretsModule: /secrets\./,
+            envVar: /os\.environ/,
+            gateAnnotation: /@GATE:|GATE_SAFE|GATE_CHECK/
+        };
+
         let currentLang = 'c';
-        let lastFindings = [];
+        let analysisResult = null;
         let selectedNIST = [];
         let currentGateState = '1';
 
         // ============================================================
-        // TAB NAVIGATION
+        // FUNCTION PARSER
         // ============================================================
+        function parseFunctions(code, lang) {
+            const functions = [];
+            const lines = code.split('\n');
+            
+            if (lang === 'c') {
+                // C function pattern: return_type name(params) {
+                const funcPattern = /^[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*$/;
+                const attrPattern = /^\[\[.*\]\]$/;
+                let i = 0;
+                
+                while (i < lines.length) {
+                    const line = lines[i].trim();
+                    
+                    // Skip attributes
+                    if (attrPattern.test(line)) {
+                        i++;
+                        continue;
+                    }
+                    
+                    // Check for function definition
+                    let funcMatch = line.match(funcPattern);
+                    if (!funcMatch && i + 1 < lines.length) {
+                        // Check if opening brace is on next line
+                        const combined = line;
+                        if (lines[i + 1].trim() === '{') {
+                            funcMatch = combined.match(funcPattern);
+                        }
+                    }
+                    
+                    // Also match: type name(params) {
+                    if (!funcMatch) {
+                        const inlineMatch = line.match(/^[\w\s\*]+\s+(\w+)\s*\([^)]*\)\s*\{/);
+                        if (inlineMatch) {
+                            funcMatch = inlineMatch;
+                        }
+                    }
+                    
+                    if (funcMatch) {
+                        const funcName = funcMatch[1];
+                        const startLine = i + 1;
+                        let braceCount = 0;
+                        let started = false;
+                        let funcLines = [];
+                        let j = i;
+                        
+                        // Find function body
+                        while (j < lines.length) {
+                            const l = lines[j];
+                            funcLines.push(l);
+                            
+                            for (const ch of l) {
+                                if (ch === '{') { braceCount++; started = true; }
+                                if (ch === '}') braceCount--;
+                            }
+                            
+                            if (started && braceCount === 0) break;
+                            j++;
+                        }
+                        
+                        functions.push({
+                            name: funcName,
+                            startLine: startLine,
+                            endLine: j + 1,
+                            code: funcLines.join('\n'),
+                            lines: funcLines
+                        });
+                        
+                        i = j + 1;
+                        continue;
+                    }
+                    i++;
+                }
+            } else {
+                // Python function pattern: def name(params):
+                const funcPattern = /^def\s+(\w+)\s*\([^)]*\)\s*:/;
+                let i = 0;
+                
+                while (i < lines.length) {
+                    const line = lines[i];
+                    const match = line.match(funcPattern);
+                    
+                    if (match) {
+                        const funcName = match[1];
+                        const startLine = i + 1;
+                        const indent = line.search(/\S/);
+                        let funcLines = [line];
+                        let j = i + 1;
+                        
+                        // Find function body (by indentation)
+                        while (j < lines.length) {
+                            const l = lines[j];
+                            const trimmed = l.trim();
+                            
+                            // Empty lines are part of function
+                            if (trimmed === '') {
+                                funcLines.push(l);
+                                j++;
+                                continue;
+                            }
+                            
+                            // Check indentation
+                            const currentIndent = l.search(/\S/);
+                            if (currentIndent <= indent && trimmed !== '') break;
+                            
+                            funcLines.push(l);
+                            j++;
+                        }
+                        
+                        functions.push({
+                            name: funcName,
+                            startLine: startLine,
+                            endLine: j,
+                            code: funcLines.join('\n'),
+                            lines: funcLines
+                        });
+                        
+                        i = j;
+                        continue;
+                    }
+                    i++;
+                }
+            }
+            
+            // Capture global/non-function code
+            const coveredLines = new Set();
+            functions.forEach(f => {
+                for (let i = f.startLine; i <= f.endLine; i++) {
+                    coveredLines.add(i);
+                }
+            });
+            
+            const globalLines = [];
+            const globalLineNums = [];
+            lines.forEach((line, idx) => {
+                if (!coveredLines.has(idx + 1)) {
+                    globalLines.push(line);
+                    globalLineNums.push(idx + 1);
+                }
+            });
+            
+            if (globalLines.some(l => l.trim() !== '')) {
+                functions.unshift({
+                    name: '[Global Scope]',
+                    startLine: 1,
+                    endLine: lines.length,
+                    code: globalLines.join('\n'),
+                    lines: globalLines,
+                    lineNumbers: globalLineNums,
+                    isGlobal: true
+                });
+            }
+            
+            return functions;
+        }
+
+        // ============================================================
+        // ANALYSIS ENGINE
+        // ============================================================
+        function analyzeFunction(func, lang) {
+            const gates = lang === 'c' ? cGates : pythonGates;
+            const findings = [];
+            const lines = func.lines;
+            const baseLineNum = func.isGlobal ? 0 : func.startLine;
+            
+            lines.forEach((line, idx) => {
+                const lineNum = func.isGlobal ? func.lineNumbers[idx] : baseLineNum + idx;
+                const trimmed = line.trim();
+                
+                // Skip comments
+                if (lang === 'c' && (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*'))) return;
+                if (lang === 'python' && trimmed.startsWith('#')) return;
+                
+                // Skip gate annotations
+                if (safeIdioms.gateAnnotation.test(line)) return;
+                
+                for (const [gateId, gate] of Object.entries(gates)) {
+                    for (const pattern of gate.patterns) {
+                        if (line.includes(pattern)) {
+                            let severity = gate.color === '#f87171' ? 'HIGH' : 'MEDIUM';
+                            
+                            // Check for safe idioms within function context
+                            const funcCode = func.code;
+                            
+                            if (gateId === 'BOF-002' && safeIdioms.boundsCheck.test(funcCode)) severity = 'LOW';
+                            if (gateId === 'NULL-002' && safeIdioms.mallocCheck.test(funcCode)) severity = 'LOW';
+                            if ((gateId === 'UAF-001' || gateId === 'DF-001') && safeIdioms.freeNull.test(funcCode)) severity = 'LOW';
+                            if ((gateId === 'INT-002' || gateId === 'REF-001') && safeIdioms.saturationCheck.test(funcCode)) severity = 'LOW';
+                            if (gateId === 'INJ-003' && safeIdioms.paramQuery.test(line)) severity = 'LOW';
+                            if (gateId === 'DESER-001' && safeIdioms.safeYaml.test(line)) continue;
+                            if (gateId === 'INJ-002' && safeIdioms.shellFalse.test(funcCode)) severity = 'LOW';
+                            if (gateId === 'CRYPT-002' && safeIdioms.secretsModule.test(funcCode)) continue;
+                            if (gateId === 'HARDCODE-001' && safeIdioms.envVar.test(line)) continue;
+                            
+                            findings.push({
+                                gate: gateId,
+                                desc: gate.desc,
+                                cwe: gate.cwe,
+                                nist: gate.nist,
+                                line: lineNum,
+                                localLine: idx,
+                                code: trimmed.substring(0, 50) + (trimmed.length > 50 ? '...' : ''),
+                                severity: severity,
+                                color: severity === 'HIGH' ? '#f87171' : severity === 'MEDIUM' ? '#fbbf24' : '#4ade80'
+                            });
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            return findings;
+        }
+
+        function analyze() {
+            const code = document.getElementById('code-input').value;
+            if (!code.trim()) {
+                document.getElementById('results').innerHTML = '<div class="empty-state">No code to analyze</div>';
+                return;
+            }
+
+            const functions = parseFunctions(code, currentLang);
+            const results = functions.map(func => ({
+                ...func,
+                findings: analyzeFunction(func, currentLang)
+            }));
+
+            analysisResult = results;
+            renderResults(results);
+            renderPrompts(results);
+        }
+
+        // ============================================================
+        // RENDERING
+        // ============================================================
+        function renderResults(results) {
+            const container = document.getElementById('results');
+            const countEl = document.getElementById('finding-count');
+            
+            const allFindings = results.flatMap(r => r.findings);
+            const high = allFindings.filter(f => f.severity === 'HIGH').length;
+            const med = allFindings.filter(f => f.severity === 'MEDIUM').length;
+            const low = allFindings.filter(f => f.severity === 'LOW').length;
+            const funcsWithIssues = results.filter(r => r.findings.length > 0 && !r.isGlobal).length;
+            
+            // Summary
+            let html = `
+                <div class="summary">
+                    <div class="summary-card high">
+                        <div class="summary-value">${high}</div>
+                        <div class="summary-label">High</div>
+                    </div>
+                    <div class="summary-card med">
+                        <div class="summary-value">${med}</div>
+                        <div class="summary-label">Medium</div>
+                    </div>
+                    <div class="summary-card low">
+                        <div class="summary-value">${low}</div>
+                        <div class="summary-label">Low</div>
+                    </div>
+                    <div class="summary-card funcs">
+                        <div class="summary-value">${results.filter(r => !r.isGlobal).length}</div>
+                        <div class="summary-label">Functions</div>
+                    </div>
+                </div>
+            `;
+            
+            countEl.textContent = `${allFindings.length} findings in ${results.length} blocks`;
+            
+            // Function blocks
+            results.forEach((func, fidx) => {
+                const fHigh = func.findings.filter(f => f.severity === 'HIGH').length;
+                const fMed = func.findings.filter(f => f.severity === 'MEDIUM').length;
+                const fLow = func.findings.filter(f => f.severity === 'LOW').length;
+                
+                let badge = '';
+                if (fHigh > 0) badge = `<span class="func-badge badge-high">${fHigh} HIGH</span>`;
+                else if (fMed > 0) badge = `<span class="func-badge badge-med">${fMed} MED</span>`;
+                else if (fLow > 0) badge = `<span class="func-badge badge-low">${fLow} LOW</span>`;
+                else badge = `<span class="func-badge badge-clean">CLEAN</span>`;
+                
+                const findingLines = new Set(func.findings.map(f => f.localLine));
+                const findingSeverities = {};
+                func.findings.forEach(f => {
+                    if (!findingSeverities[f.localLine] || f.severity === 'HIGH') {
+                        findingSeverities[f.localLine] = f.severity;
+                    }
+                });
+                
+                html += `
+                    <div class="func-block ${func.findings.length > 0 ? 'expanded' : ''}" data-idx="${fidx}">
+                        <div class="func-header" onclick="toggleFunc(${fidx})">
+                            <div class="func-name">${escapeHtml(func.name)}</div>
+                            <div class="func-meta">
+                                <span class="func-lines">L${func.startLine}-${func.endLine}</span>
+                                ${badge}
+                                <span class="func-chevron">▶</span>
+                            </div>
+                        </div>
+                        <div class="func-body">
+                            <div class="func-code">
+                                ${func.lines.map((line, lidx) => {
+                                    const lineNum = func.isGlobal ? func.lineNumbers[lidx] : func.startLine + lidx;
+                                    const hasFinding = findingLines.has(lidx);
+                                    const sev = findingSeverities[lidx];
+                                    let lineClass = 'line';
+                                    if (hasFinding) {
+                                        lineClass += sev === 'HIGH' ? ' has-finding' : sev === 'MEDIUM' ? ' has-finding-med' : ' has-finding-low';
+                                    }
+                                    return `<div class="${lineClass}"><span class="line-num">${lineNum}</span><span class="line-content">${escapeHtml(line)}</span></div>`;
+                                }).join('')}
+                            </div>
+                            ${func.findings.length > 0 ? `
+                                <div class="func-findings">
+                                    ${func.findings.map(f => `
+                                        <div class="finding ${f.severity.toLowerCase()}">
+                                            <div class="finding-header">
+                                                <span class="finding-id" style="color: ${f.color}">${f.gate}</span>
+                                                <span class="finding-severity ${f.severity.toLowerCase()}">${f.severity}</span>
+                                            </div>
+                                            <div class="finding-desc">${f.desc}</div>
+                                            <div class="finding-line">Line ${f.line}: ${escapeHtml(f.code)}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<div style="color: var(--success); font-size: 0.75rem;">No security issues detected</div>'}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function renderPrompts(results) {
+            const container = document.getElementById('prompts');
+            const allFindings = results.flatMap(r => r.findings);
+            
+            if (allFindings.length === 0) {
+                container.innerHTML = '<div class="empty-state">No findings to generate prompts for</div>';
+                return;
+            }
+            
+            // Group by function
+            let html = '';
+            results.forEach(func => {
+                if (func.findings.length === 0) return;
+                
+                const uniqueGates = [...new Set(func.findings.map(f => f.gate))];
+                const prompts = uniqueGates.map(gate => {
+                    const f = func.findings.find(x => x.gate === gate);
+                    const fix = getFixAdvice(gate);
+                    return `{AI}::code(FIX)[${gate}; ${fix}; func:${func.name}]`;
+                });
+                
+                html += `
+                    <div class="prompt-section">
+                        <div class="prompt-section-header">${escapeHtml(func.name)}</div>
+                        ${prompts.map(p => `<div class="prompt-item" onclick="copyPrompt(this)">${escapeHtml(p)}</div>`).join('')}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function getFixAdvice(gate) {
+            const advice = {
+                'UAF-001': 'set ptr = nullptr after free',
+                'DF-001': 'guard with if (ptr) before free',
+                'BOF-001': 'use strncpy/snprintf with bounds',
+                'BOF-002': 'add bounds check: if (idx < len)',
+                'NULL-001': 'check ptr before dereference',
+                'NULL-002': 'check allocation result',
+                'INT-001': 'use __builtin_mul_overflow',
+                'INT-002': 'use __builtin_add_overflow',
+                'REF-001': 'add saturation: if (rc < MAX)',
+                'INJ-001': 'use ast.literal_eval()',
+                'INJ-002': 'use subprocess with shell=False',
+                'INJ-003': 'use parameterized queries',
+                'PATH-001': 'validate and sanitize path',
+                'DESER-001': 'use yaml.safe_load()',
+                'CRYPT-001': 'use SHA-256 or better',
+                'CRYPT-002': 'use secrets module',
+                'HARDCODE-001': 'use environment variables',
+                'SSRF-001': 'validate and whitelist URLs',
+                'XXE-001': 'disable external entities',
+                'FMT-001': 'use format specifiers, not user input'
+            };
+            return advice[gate] || 'review and fix';
+        }
+
+        // ============================================================
+        // UI FUNCTIONS
+        // ============================================================
+        function toggleFunc(idx) {
+            const block = document.querySelector(`.func-block[data-idx="${idx}"]`);
+            block.classList.toggle('expanded');
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.func-block').forEach(b => b.classList.add('expanded'));
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.func-block').forEach(b => b.classList.remove('expanded'));
+        }
+
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -683,8 +1268,17 @@ INVARIANT:
             event.target.classList.add('active');
         }
 
+        function setLang(lang) {
+            currentLang = lang;
+            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`.lang-btn.${lang === 'c' ? 'c-lang' : 'python'}`).classList.add('active');
+            document.getElementById('lang-label').textContent = lang === 'c' ? 'C Source Code' : 'Python Source Code';
+            document.getElementById('code-input').placeholder = lang === 'c' ? 
+                '// Paste C code here...' : '# Paste Python code here...';
+        }
+
         // ============================================================
-        // EXCLISP COMMAND COMPOSER
+        // EXCLISP COMPOSER
         // ============================================================
         function updateCommand() {
             const auth = document.getElementById('auth-select').value;
@@ -754,7 +1348,7 @@ INVARIANT:
         function copyCommand() {
             const preview = document.getElementById('command-preview');
             const text = preview.innerText || preview.textContent;
-            navigator.clipboard.writeText(text.replace(/\n/g, ' '));
+            navigator.clipboard.writeText(text.replace(/\n/g, ' ').trim());
             event.target.textContent = 'COPIED!';
             setTimeout(() => event.target.textContent = 'COPY', 1200);
         }
@@ -790,388 +1384,20 @@ INVARIANT:
             cContainer.innerHTML = Object.entries(cGates).map(([id, g]) => `
                 <div class="gate-ref-item">
                     <div class="gate-ref-id" style="color: ${g.color}">${id}</div>
-                    <div class="gate-ref-desc">${g.desc} (${g.cwe})</div>
+                    <div class="gate-ref-desc">${g.desc} (${g.cwe}) - ${g.nist}</div>
                 </div>
             `).join('');
 
             pyContainer.innerHTML = Object.entries(pythonGates).map(([id, g]) => `
                 <div class="gate-ref-item">
                     <div class="gate-ref-id" style="color: ${g.color}">${id}</div>
-                    <div class="gate-ref-desc">${g.desc} (${g.cwe})</div>
+                    <div class="gate-ref-desc">${g.desc} (${g.cwe}) - ${g.nist}</div>
                 </div>
             `).join('');
         }
 
-        // Initialize on load
-        document.addEventListener('DOMContentLoaded', renderGateReference);
-
         // ============================================================
-        // C SECURITY GATES
-        // ============================================================
-        const cGates = {
-            'UAF-001': { patterns: ['free('], desc: 'Use-after-free', cwe: 'CWE-416', severity: 'high', color: '#ec4899', nist: ['SI-16'] },
-            'DF-001': { patterns: ['free('], desc: 'Double-free risk', cwe: 'CWE-415', severity: 'high', color: '#f43f5e', nist: ['SI-16'] },
-            'BOF-001': { patterns: ['memcpy', 'strcpy', 'strcat', 'sprintf', 'gets'], desc: 'Buffer overflow', cwe: 'CWE-122', severity: 'high', color: '#ef4444', nist: ['SI-16', 'SI-10'] },
-            'BOF-002': { patterns: ['['], desc: 'Out-of-bounds access', cwe: 'CWE-125', severity: 'high', color: '#ef4444', nist: ['SI-16'] },
-            'NULL-001': { patterns: ['== NULL', '== nullptr', '!ptr'], desc: 'Null dereference risk', cwe: 'CWE-476', severity: 'medium', color: '#6b7280', nist: ['SI-16'] },
-            'NULL-002': { patterns: ['malloc(', 'calloc(', 'realloc('], desc: 'Unchecked allocation', cwe: 'CWE-476', severity: 'medium', color: '#6b7280', nist: ['SI-16'] },
-            'INT-001': { patterns: ['malloc(', '* sizeof'], desc: 'Allocation overflow', cwe: 'CWE-190', severity: 'high', color: '#f59e0b', nist: ['SI-16'] },
-            'INT-002': { patterns: ['++', '--', '+=', '-=', '*='], desc: 'Integer overflow', cwe: 'CWE-190', severity: 'medium', color: '#f59e0b', nist: ['SI-16'] },
-            'REF-001': { patterns: ['++', 'incref', 'addref'], desc: 'Refcount overflow', cwe: 'CWE-190', severity: 'high', color: '#14b8a6', nist: ['SI-16'] },
-            'DOS-001': { patterns: ['hash', 'dict', 'map['], desc: 'Hash collision DoS', cwe: 'CWE-400', severity: 'low', color: '#64748b', nist: ['SC-5'] }
-        };
-
-        // ============================================================
-        // PYTHON SECURITY GATES
-        // ============================================================
-        const pythonGates = {
-            'INJ-001': { 
-                patterns: ['eval(', 'exec(', 'compile('], 
-                desc: 'Code injection via eval/exec', 
-                cwe: 'CWE-94', 
-                severity: 'high', 
-                color: '#ef4444',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[INJ-001; use ast.literal_eval(); avoid eval/exec]'
-            },
-            'INJ-002': { 
-                patterns: ['os.system(', 'subprocess.call(', 'subprocess.Popen(', 'os.popen('], 
-                desc: 'Command injection', 
-                cwe: 'CWE-78', 
-                severity: 'high', 
-                color: '#ef4444',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[INJ-002; use subprocess with shell=False; shlex.quote()]'
-            },
-            'INJ-003': { 
-                patterns: ['cursor.execute(', 'execute(', '.query(', 'raw('], 
-                desc: 'SQL injection risk', 
-                cwe: 'CWE-89', 
-                severity: 'high', 
-                color: '#ef4444',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[INJ-003; use parameterized queries; never string format SQL]'
-            },
-            'PATH-001': { 
-                patterns: ['open(', 'os.path.join(', 'pathlib.Path('], 
-                desc: 'Path traversal risk', 
-                cwe: 'CWE-22', 
-                severity: 'medium', 
-                color: '#f59e0b',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[PATH-001; validate path; use os.path.realpath(); check prefix]'
-            },
-            'DESER-001': { 
-                patterns: ['pickle.load', 'pickle.loads', 'yaml.load(', 'yaml.unsafe_load'], 
-                desc: 'Unsafe deserialization', 
-                cwe: 'CWE-502', 
-                severity: 'high', 
-                color: '#ec4899',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[DESER-001; use yaml.safe_load(); avoid pickle for untrusted data]'
-            },
-            'DESER-002': { 
-                patterns: ['marshal.load', 'shelve.open'], 
-                desc: 'Unsafe deserialization (marshal/shelve)', 
-                cwe: 'CWE-502', 
-                severity: 'high', 
-                color: '#ec4899',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[DESER-002; use JSON for untrusted data; validate before load]'
-            },
-            'CRYPT-001': { 
-                patterns: ['md5(', 'sha1(', 'DES', 'RC4'], 
-                desc: 'Weak cryptography', 
-                cwe: 'CWE-327', 
-                severity: 'medium', 
-                color: '#a855f7',
-                nist: ['SC-13'],
-                fix: '{AI}::code(FIX)[CRYPT-001; use SHA-256+; use AES-256-GCM]'
-            },
-            'CRYPT-002': { 
-                patterns: ['random.', 'random.randint', 'random.choice'], 
-                desc: 'Insecure randomness', 
-                cwe: 'CWE-330', 
-                severity: 'medium', 
-                color: '#a855f7',
-                nist: ['SC-13'],
-                fix: '{AI}::code(FIX)[CRYPT-002; use secrets module; secrets.token_bytes()]'
-            },
-            'SSRF-001': { 
-                patterns: ['requests.get(', 'requests.post(', 'urllib.request.urlopen(', 'httpx.'], 
-                desc: 'SSRF risk', 
-                cwe: 'CWE-918', 
-                severity: 'medium', 
-                color: '#f59e0b',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[SSRF-001; validate URL scheme/host; whitelist allowed domains]'
-            },
-            'XXE-001': { 
-                patterns: ['xml.etree.ElementTree', 'lxml.etree', 'xml.dom.minidom'], 
-                desc: 'XXE risk in XML parsing', 
-                cwe: 'CWE-611', 
-                severity: 'medium', 
-                color: '#f59e0b',
-                nist: ['SI-10'],
-                fix: '{AI}::code(FIX)[XXE-001; use defusedxml; disable external entities]'
-            },
-            'HARDCODE-001': { 
-                patterns: ['password =', 'api_key =', 'secret =', 'token =', 'PASSWORD', 'API_KEY', 'SECRET'], 
-                desc: 'Hardcoded credentials', 
-                cwe: 'CWE-798', 
-                severity: 'high', 
-                color: '#ef4444',
-                nist: ['IA-5'],
-                fix: '{AI}::code(FIX)[HARDCODE-001; use environment variables; use secrets manager]'
-            },
-            'ASSERT-001': { 
-                patterns: ['assert '], 
-                desc: 'Assert for security checks', 
-                cwe: 'CWE-617', 
-                severity: 'low', 
-                color: '#64748b',
-                nist: ['SI-16'],
-                fix: '{AI}::code(FIX)[ASSERT-001; use explicit if/raise; assert disabled with -O]'
-            },
-            'TEMP-001': { 
-                patterns: ['tempfile.mktemp(', '/tmp/', 'tempfile.NamedTemporaryFile'], 
-                desc: 'Insecure temp file', 
-                cwe: 'CWE-377', 
-                severity: 'low', 
-                color: '#64748b',
-                nist: ['SI-16'],
-                fix: '{AI}::code(FIX)[TEMP-001; use tempfile.mkstemp(); use context manager]'
-            },
-            'LOG-001': { 
-                patterns: ['print(password', 'print(secret', 'logging.debug(password', 'logger.info(token'], 
-                desc: 'Sensitive data in logs', 
-                cwe: 'CWE-532', 
-                severity: 'medium', 
-                color: '#f59e0b',
-                nist: ['AU-3'],
-                fix: '{AI}::code(FIX)[LOG-001; mask sensitive data; use structured logging]'
-            },
-            'REGEX-001': { 
-                patterns: ['re.compile(', 're.match(', 're.search('], 
-                desc: 'ReDoS risk', 
-                cwe: 'CWE-1333', 
-                severity: 'low', 
-                color: '#64748b',
-                nist: ['SC-5'],
-                fix: '{AI}::code(FIX)[REGEX-001; avoid nested quantifiers; set timeout; use re2]'
-            }
-        };
-
-        // Safe idioms that reduce severity
-        const pythonSafeIdioms = {
-            parameterizedQuery: {
-                pattern: /execute\s*\([^,]+,\s*[\[\(]/,
-                affects: ['INJ-003'],
-                reason: 'Parameterized query detected'
-            },
-            safeYaml: {
-                pattern: /yaml\.safe_load/,
-                affects: ['DESER-001'],
-                reason: 'Using safe_load'
-            },
-            shellFalse: {
-                pattern: /shell\s*=\s*False/,
-                affects: ['INJ-002'],
-                reason: 'shell=False specified'
-            },
-            secretsModule: {
-                pattern: /secrets\./,
-                affects: ['CRYPT-002'],
-                reason: 'Using secrets module'
-            },
-            envVar: {
-                pattern: /os\.environ|getenv/,
-                affects: ['HARDCODE-001'],
-                reason: 'Using environment variable'
-            }
-        };
-
-        // ============================================================
-        // LANGUAGE SWITCHING
-        // ============================================================
-        function setLang(lang) {
-            currentLang = lang;
-            document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`.lang-btn.${lang === 'c' ? 'c-lang' : lang}`).classList.add('active');
-            
-            document.getElementById('lang-label').textContent = lang === 'c' ? 'C Source Code' : 'Python Source Code';
-            document.getElementById('code-input').placeholder = lang === 'c' 
-                ? '/* Paste C code here */\nvoid process(char *buf, size_t len) {\n    memcpy(dst, src, len + 10);\n}'
-                : '# Paste Python code here\ndef process(user_input):\n    eval(user_input)  # Dangerous!';
-            
-            // Clear results
-            document.getElementById('results').innerHTML = '<p style="color: var(--text-muted); font-size: 0.75rem;">Enter code and click Analyze.</p>';
-            document.getElementById('prompts').innerHTML = '<p style="color: var(--text-muted); font-size: 0.75rem;">Run analysis to generate prompts.</p>';
-            ['stat-high', 'stat-medium', 'stat-low', 'stat-gates'].forEach(id => {
-                document.getElementById(id).textContent = '0';
-            });
-        }
-
-        // ============================================================
-        // ANALYSIS
-        // ============================================================
-        function analyze() {
-            const code = document.getElementById('code-input').value;
-            const lines = code.split('\n');
-            const findings = [];
-            const gates = currentLang === 'c' ? cGates : pythonGates;
-            const safeIdioms = currentLang === 'python' ? pythonSafeIdioms : {};
-
-            // Track for C-specific UAF/DF detection
-            const freeVars = new Map();
-
-            lines.forEach((line, lineNum) => {
-                const trimmed = line.trim();
-                if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#') && currentLang === 'python') {
-                    // Skip comments (but # in C is preprocessor, keep it)
-                    if (currentLang === 'python' && trimmed.startsWith('#')) return;
-                    if (currentLang === 'c' && trimmed.startsWith('//')) return;
-                }
-
-                // C-specific: Track free() for UAF/DF
-                if (currentLang === 'c') {
-                    const freeMatch = line.match(/free\s*\(\s*(\w+)\s*\)/);
-                    if (freeMatch) {
-                        const varName = freeMatch[1];
-                        if (freeVars.has(varName)) {
-                            findings.push(createFinding('DF-001', lineNum + 1, line, 'Double-free detected'));
-                        }
-                        freeVars.set(varName, lineNum + 1);
-                    }
-
-                    // Check for use after free
-                    freeVars.forEach((freeLine, varName) => {
-                        if (lineNum + 1 > freeLine && line.includes(varName) && !line.includes('free')) {
-                            if (line.match(new RegExp(`${varName}\\s*\\[|${varName}\\s*->|\\*\\s*${varName}`))) {
-                                findings.push(createFinding('UAF-001', lineNum + 1, line, `Use of '${varName}' after free`));
-                            }
-                        }
-                    });
-                }
-
-                // Pattern matching for both languages
-                for (const [gateId, gate] of Object.entries(gates)) {
-                    for (const pattern of gate.patterns) {
-                        if (line.includes(pattern)) {
-                            // Check safe idioms (Python)
-                            let isSafe = false;
-                            if (currentLang === 'python') {
-                                for (const [idiomName, idiom] of Object.entries(safeIdioms)) {
-                                    if (idiom.affects.includes(gateId) && idiom.pattern.test(line)) {
-                                        isSafe = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if (!isSafe) {
-                                const existing = findings.find(f => f.gate === gateId && f.line === lineNum + 1);
-                                if (!existing) {
-                                    findings.push(createFinding(gateId, lineNum + 1, line, gate.desc));
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-            });
-
-            // Sort by severity
-            findings.sort((a, b) => {
-                const sev = { high: 0, medium: 1, low: 2 };
-                return (sev[a.severity] || 2) - (sev[b.severity] || 2);
-            });
-
-            lastFindings = findings;
-            renderResults(findings);
-            renderPrompts(findings);
-        }
-
-        function createFinding(gateId, line, code, desc) {
-            const gates = currentLang === 'c' ? cGates : pythonGates;
-            const gate = gates[gateId];
-            return {
-                gate: gateId,
-                line,
-                code: code.trim(),
-                desc: desc || gate?.desc || '',
-                severity: gate?.severity || 'medium',
-                cwe: gate?.cwe || 'CWE-???',
-                nist: gate?.nist || [],
-                color: gate?.color || '#666',
-                fix: gate?.fix || `{AI}::code(FIX)[${gateId}]`
-            };
-        }
-
-        function renderResults(findings) {
-            const container = document.getElementById('results');
-            document.getElementById('finding-count').textContent = `${findings.length} findings`;
-
-            const high = findings.filter(f => f.severity === 'high').length;
-            const medium = findings.filter(f => f.severity === 'medium').length;
-            const low = findings.filter(f => f.severity === 'low').length;
-            const gates = new Set(findings.map(f => f.gate)).size;
-
-            document.getElementById('stat-high').textContent = high;
-            document.getElementById('stat-medium').textContent = medium;
-            document.getElementById('stat-low').textContent = low;
-            document.getElementById('stat-gates').textContent = gates;
-
-            if (findings.length === 0) {
-                container.innerHTML = '<p style="color: var(--success);">✓ No security issues detected.</p>';
-                return;
-            }
-
-            container.innerHTML = findings.map(f => `
-                <div class="finding">
-                    <div class="finding-header">
-                        <span class="finding-gate" style="background: ${f.color}">${f.gate}</span>
-                        <span class="severity-badge severity-${f.severity}">${f.severity.toUpperCase()}</span>
-                        <span class="finding-line">Line ${f.line}</span>
-                    </div>
-                    <div class="finding-desc">${escapeHtml(f.desc)}</div>
-                    <div class="finding-code">${escapeHtml(f.code)}</div>
-                    <div class="finding-nist">
-                        <span class="nist-badge cwe-badge">${f.cwe}</span>
-                        ${f.nist.map(n => `<span class="nist-badge">${n}</span>`).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderPrompts(findings) {
-            const container = document.getElementById('prompts');
-            
-            if (findings.length === 0) {
-                container.innerHTML = '<p style="color: var(--success);">✓ No prompts needed.</p>';
-                return;
-            }
-
-            const uniqueGates = [...new Set(findings.map(f => f.gate))];
-            const gates = currentLang === 'c' ? cGates : pythonGates;
-
-            container.innerHTML = uniqueGates.map(gateId => {
-                const gate = gates[gateId];
-                const gateFindings = findings.filter(f => f.gate === gateId);
-                const lines = gateFindings.map(f => f.line).join(', ');
-                const fix = gate?.fix || `{AI}::code(FIX)[${gateId}]`;
-                
-                return `
-                    <div class="prompt-card">
-                        <div class="prompt-cmd">${escapeHtml(fix)}</div>
-                        <div class="prompt-desc">Lines: ${lines} | ${gate?.cwe || 'CWE-???'}</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // ============================================================
-        // UTILITIES
+        // UTILITY FUNCTIONS
         // ============================================================
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -1179,29 +1405,34 @@ INVARIANT:
             return div.innerHTML;
         }
 
-        function pasteCode() {
-            navigator.clipboard.readText().then(text => {
+        async function pasteCode() {
+            try {
+                const text = await navigator.clipboard.readText();
                 document.getElementById('code-input').value = text;
-                setTimeout(analyze, 100);
-            }).catch(() => {
-                document.getElementById('code-input').focus();
-                alert('Clipboard access denied. Press Ctrl+V to paste.');
-            });
+            } catch (e) {
+                alert('Could not access clipboard. Please paste manually.');
+            }
+        }
+
+        function copyPrompt(el) {
+            navigator.clipboard.writeText(el.textContent);
+            el.style.borderColor = 'var(--success)';
+            setTimeout(() => el.style.borderColor = '', 800);
         }
 
         function copyAllPrompts() {
-            const gates = currentLang === 'c' ? cGates : pythonGates;
-            const uniqueGates = [...new Set(lastFindings.map(f => f.gate))];
-            const text = uniqueGates.map(gateId => {
-                const gate = gates[gateId];
-                const lines = lastFindings.filter(f => f.gate === gateId).map(f => f.line).join(', ');
-                return `/* ${gateId} - Lines: ${lines} */\n${gate?.fix || `{AI}::code(FIX)[${gateId}]`}`;
-            }).join('\n\n');
-            
+            const prompts = document.querySelectorAll('.prompt-item');
+            const text = Array.from(prompts).map(p => p.textContent).join('\n');
             navigator.clipboard.writeText(text);
             event.target.textContent = 'COPIED!';
             setTimeout(() => event.target.textContent = 'COPY ALL', 1200);
         }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', renderGateReference);
     </script>
+</body>
+</html>
+
 </body>
 </html>
