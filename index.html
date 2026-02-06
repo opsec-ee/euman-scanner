@@ -1,1 +1,2496 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euman Security Scanner v6.0 (4-State Gate Logic)</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --bg-elevated: #1e1e2a;
+            --border: #2a2a3a;
+            --border-light: #3a3a4a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #7c9cff;
+            --accent-dim: #4a6acc;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --error: #f87171;
+            --critical: #dc2626;
+            --info: #38bdf8;
+            --review: #f59e0b;
+            --purple: #a78bfa;
+            --c-lang: #555555;
+            --cpp-lang: #f34b7d;
+            --rust-lang: #dea584;
+            --python: #3572A5;
+            --terraform: #844fba;
+            --kubernetes: #326ce5;
+            --docker: #2496ed;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        .app-container { display: flex; height: 100vh; }
+        .sidebar {
+            width: 220px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .content-area { flex: 1; overflow: auto; padding: 1rem; }
+
+        .logo { padding: 1rem; border-bottom: 1px solid var(--border); }
+        .logo h1 { font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: var(--accent); }
+        .logo span { font-size: 0.6rem; color: var(--text-muted); display: block; margin-top: 0.2rem; }
+        
+        .nav-section { padding: 0.75rem 0; }
+        .nav-label { padding: 0.3rem 1rem; font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+        .nav-item {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem;
+            color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
+            border-left: 2px solid transparent;
+        }
+        .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .nav-item.active { background: var(--bg-tertiary); color: var(--accent); border-left-color: var(--accent); }
+        .nav-icon { width: 16px; text-align: center; }
+        .nav-badge {
+            margin-left: auto; background: var(--error); color: white;
+            font-size: 0.55rem; padding: 0.1rem 0.4rem; border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .nav-badge.warn { background: var(--warning); color: black; }
+        .nav-badge.review { background: var(--review); color: black; }
+        .nav-badge.suppressed { background: var(--text-muted); }
+
+        .header-title { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+        .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+        
+        .lang-toggle {
+            display: flex; gap: 0.2rem; background: var(--bg-tertiary);
+            padding: 0.15rem; border-radius: 4px; border: 1px solid var(--border);
+        }
+        .lang-btn {
+            padding: 0.3rem 0.5rem; border: none; border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+            cursor: pointer; background: transparent; color: var(--text-muted);
+        }
+        .lang-btn.active { color: white; }
+        .lang-btn[data-lang="c"].active { background: var(--c-lang); }
+        .lang-btn[data-lang="cpp"].active { background: var(--cpp-lang); }
+        .lang-btn[data-lang="rust"].active { background: var(--rust-lang); color: black; }
+        .lang-btn[data-lang="python"].active { background: var(--python); }
+        .lang-btn[data-lang="terraform"].active { background: var(--terraform); }
+        .lang-btn[data-lang="kubernetes"].active { background: var(--kubernetes); }
+        .lang-btn[data-lang="docker"].active { background: var(--docker); }
+
+        .btn {
+            padding: 0.4rem 0.8rem; border: 1px solid var(--border); border-radius: 4px;
+            background: var(--bg-tertiary); color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+            cursor: pointer; display: flex; align-items: center; gap: 0.3rem;
+        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-primary { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); }
+        .btn-primary:hover { background: var(--accent-dim); }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+        .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+        .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
+
+        .card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; overflow: hidden;
+        }
+        .card-header {
+            background: var(--bg-tertiary); padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+            color: var(--text-secondary); text-transform: uppercase;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-body { padding: 0.75rem; }
+        .card-body.scroll { max-height: 400px; overflow-y: auto; }
+
+        .metric-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: 6px; padding: 0.75rem; text-align: center;
+        }
+        .metric-value { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; line-height: 1; }
+        .metric-label { font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; margin-top: 0.2rem; }
+        .metric-card.critical .metric-value { color: var(--critical); }
+        .metric-card.high .metric-value { color: var(--error); }
+        .metric-card.medium .metric-value { color: var(--warning); }
+        .metric-card.low .metric-value { color: var(--success); }
+        .metric-card.review .metric-value { color: var(--review); }
+        .metric-card.suppressed .metric-value { color: var(--text-muted); }
+
+        .risk-score {
+            display: flex; align-items: center; gap: 1rem; padding: 1rem;
+            background: var(--bg-tertiary); border-radius: 6px; margin-bottom: 1rem;
+        }
+        .risk-circle {
+            width: 70px; height: 70px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace; font-size: 1.3rem;
+            font-weight: 700; flex-shrink: 0;
+        }
+        .risk-circle.critical { background: rgba(220, 38, 38, 0.2); border: 3px solid var(--critical); color: var(--critical); }
+        .risk-circle.high { background: rgba(248, 113, 113, 0.2); border: 3px solid var(--error); color: var(--error); }
+        .risk-circle.medium { background: rgba(251, 191, 36, 0.2); border: 3px solid var(--warning); color: var(--warning); }
+        .risk-circle.low { background: rgba(74, 222, 128, 0.2); border: 3px solid var(--success); color: var(--success); }
+        .risk-details { flex: 1; }
+        .risk-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.2rem; }
+        .risk-subtitle { font-size: 0.7rem; color: var(--text-secondary); }
+
+        .code-editor {
+            width: 100%; min-height: 280px; padding: 0.75rem;
+            background: var(--bg-primary); border: 1px solid var(--border);
+            border-radius: 4px; color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+            resize: vertical; line-height: 1.5;
+        }
+        .code-editor:focus { outline: none; border-color: var(--accent); }
+
+        .finding-item {
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 6px; margin-bottom: 0.5rem; overflow: hidden;
+        }
+        .finding-item.suppressed { opacity: 0.5; }
+        .finding-header {
+            display: flex; align-items: center; padding: 0.5rem 0.75rem;
+            cursor: pointer; gap: 0.6rem;
+        }
+        .finding-header:hover { background: var(--bg-elevated); }
+        .finding-severity {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.5rem;
+            padding: 0.12rem 0.35rem; border-radius: 3px; font-weight: 600; flex-shrink: 0;
+        }
+        .finding-severity.critical { background: var(--critical); color: white; }
+        .finding-severity.high { background: var(--error); color: white; }
+        .finding-severity.medium { background: var(--warning); color: black; }
+        .finding-severity.low { background: var(--success); color: black; }
+        .finding-severity.review { background: var(--review); color: black; }
+        .finding-severity.suppressed { background: var(--text-muted); color: white; }
+        .finding-title { flex: 1; font-size: 0.75rem; }
+        .finding-gate { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--accent); }
+        .finding-meta { font-size: 0.55rem; color: var(--text-muted); }
+        .finding-reason { font-size: 0.55rem; color: var(--success); font-style: italic; margin-left: 0.5rem; }
+        .finding-body {
+            display: none; padding: 0.75rem; border-top: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+        .finding-item.expanded .finding-body { display: block; }
+        .finding-code {
+            background: var(--bg-primary); border: 1px solid var(--border);
+            border-radius: 4px; padding: 0.5rem; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem; margin: 0.5rem 0; overflow-x: auto;
+        }
+        .finding-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .tag {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.5rem;
+            padding: 0.12rem 0.35rem; border-radius: 3px;
+            background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-secondary);
+        }
+        .tag.owasp { border-color: var(--purple); color: var(--purple); }
+        .tag.cwe { border-color: var(--info); color: var(--info); }
+        .tag.nist { border-color: var(--success); color: var(--success); }
+
+        .func-block {
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 6px; margin-bottom: 0.5rem; overflow: hidden;
+        }
+        .func-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 0.75rem; cursor: pointer;
+        }
+        .func-header:hover { background: var(--bg-elevated); }
+        .func-name { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; color: var(--accent); }
+        .func-badges { display: flex; gap: 0.3rem; }
+        .func-badge { font-family: 'JetBrains Mono', monospace; font-size: 0.45rem; padding: 0.08rem 0.3rem; border-radius: 3px; }
+        .func-body { display: none; border-top: 1px solid var(--border); }
+        .func-block.expanded .func-body { display: block; }
+        .func-code {
+            background: var(--bg-primary); padding: 0.5rem;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+            overflow-x: auto; max-height: 180px; overflow-y: auto;
+        }
+        .code-line { display: flex; line-height: 1.5; }
+        .line-num { color: var(--text-muted); min-width: 35px; text-align: right; padding-right: 10px; user-select: none; }
+        .line-content { flex: 1; white-space: pre; }
+        .line-finding { background: rgba(248, 113, 113, 0.15); }
+        .line-suppressed { background: rgba(96, 96, 112, 0.15); }
+        .line-review { background: rgba(245, 158, 11, 0.15); }
+
+        .nist-toggle {
+            padding: 0.2rem 0.4rem; border: 1px solid var(--border); background: var(--bg-tertiary);
+            color: var(--text-muted); border-radius: 3px; cursor: pointer; font-size: 0.6rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .nist-toggle.active { border-color: var(--accent); color: var(--accent); background: rgba(124, 156, 255, 0.1); }
+        .sym-btn {
+            padding: 0.2rem 0.4rem; border: 1px solid var(--border); background: var(--bg-tertiary);
+            color: var(--text-primary); border-radius: 3px; cursor: pointer; font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace; min-width: 28px; text-align: center;
+        }
+        .sym-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .quick-cmd {
+            padding: 0.3rem 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 3px; cursor: pointer; font-size: 0.6rem;
+        }
+        .quick-cmd:hover { border-color: var(--accent); }
+        .quick-cmd code { color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+        .prompt-item {
+            padding: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 4px; margin-bottom: 0.4rem; cursor: pointer; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem; color: var(--accent); word-break: break-all;
+        }
+        .prompt-item:hover { border-color: var(--accent); }
+        .prompt-item .prompt-meta { color: var(--text-muted); font-size: 0.55rem; margin-top: 0.2rem; }
+
+        .secret-item {
+            display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 4px; margin-bottom: 0.3rem;
+        }
+        .secret-icon { font-size: 0.9rem; }
+        .secret-info { flex: 1; }
+        .secret-type { font-size: 0.7rem; font-weight: 600; }
+        .secret-location { font-size: 0.6rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .secret-preview {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.6rem;
+            color: var(--error); background: var(--bg-primary);
+            padding: 0.15rem 0.35rem; border-radius: 3px;
+        }
+
+        .suppression-rule {
+            display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 4px; margin-bottom: 0.3rem; font-size: 0.7rem;
+        }
+        .suppression-rule code {
+            font-family: 'JetBrains Mono', monospace; color: var(--accent);
+            background: var(--bg-primary); padding: 0.1rem 0.3rem; border-radius: 3px;
+        }
+        .suppression-count { margin-left: auto; color: var(--text-muted); font-size: 0.6rem; }
+
+        .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); }
+        .empty-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+
+        .tab-bar {
+            display: flex; gap: 0.2rem; background: var(--bg-tertiary);
+            padding: 0.25rem; border-radius: 4px; margin-bottom: 0.75rem;
+        }
+        .tab-btn {
+            padding: 0.35rem 0.7rem; border: none; border-radius: 3px;
+            background: transparent; color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; cursor: pointer;
+        }
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { background: var(--bg-primary); color: var(--accent); }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        @media (max-width: 1200px) {
+            .sidebar { width: 55px; }
+            .nav-label, .nav-item span:not(.nav-icon):not(.nav-badge) { display: none; }
+            .nav-item { justify-content: center; padding: 0.7rem; }
+            .logo h1 { font-size: 0.65rem; }
+            .logo span { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="logo">
+                <h1>EUMAN</h1>
+                <span>Security Scanner v6.0</span>
+            </div>
+            <div class="nav-section">
+                <div class="nav-label">Analysis</div>
+                <div class="nav-item active" onclick="showView('dashboard')">
+                    <span class="nav-icon">&#x1F4CA;</span><span>Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="showView('scan')">
+                    <span class="nav-icon">&#x1F50D;</span><span>Scan Code</span>
+                </div>
+                <div class="nav-item" onclick="showView('findings')">
+                    <span class="nav-icon">&#x26A0;&#xFE0F;</span><span>Findings</span>
+                    <span class="nav-badge" id="nav-findings-count">0</span>
+                </div>
+                <div class="nav-item" onclick="showView('review')">
+                    <span class="nav-icon">&#x2753;</span><span>Review</span>
+                    <span class="nav-badge review" id="nav-review-count">0</span>
+                </div>
+                <div class="nav-item" onclick="showView('suppressed')">
+                    <span class="nav-icon">&#x1F507;</span><span>Suppressed</span>
+                    <span class="nav-badge suppressed" id="nav-suppressed-count">0</span>
+                </div>
+                <div class="nav-item" onclick="showView('secrets')">
+                    <span class="nav-icon">&#x1F511;</span><span>Secrets</span>
+                    <span class="nav-badge" id="nav-secrets-count">0</span>
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-label">Tools</div>
+                <div class="nav-item" onclick="showView('exclisp')">
+                    <span class="nav-icon">&#x03BB;</span><span>ExCLisp</span>
+                </div>
+                <div class="nav-item" onclick="showView('prompts')">
+                    <span class="nav-icon">&#x1F916;</span><span>AI Prompts</span>
+                </div>
+                <div class="nav-item" onclick="showView('rules')">
+                    <span class="nav-icon">&#x1F4CB;</span><span>Rules</span>
+                </div>
+                <div class="nav-item" onclick="showView('reference')">
+                    <span class="nav-icon">&#x1F4D6;</span><span>Reference</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <div class="header-title" id="view-title">Dashboard</div>
+                <div class="header-actions">
+                    <div class="lang-toggle">
+                        <button class="lang-btn active" data-lang="c" onclick="setLang('c')">C</button>
+                        <button class="lang-btn" data-lang="cpp" onclick="setLang('cpp')">C++</button>
+                        <button class="lang-btn" data-lang="rust" onclick="setLang('rust')">Rust</button>
+                        <button class="lang-btn" data-lang="python" onclick="setLang('python')">PY</button>
+                        <button class="lang-btn" data-lang="terraform" onclick="setLang('terraform')">TF</button>
+                        <button class="lang-btn" data-lang="kubernetes" onclick="setLang('kubernetes')">K8s</button>
+                        <button class="lang-btn" data-lang="docker" onclick="setLang('docker')">Docker</button>
+                    </div>
+                    <button class="btn" onclick="exportSARIF()">SARIF</button>
+                    <button class="btn" onclick="exportJSON()">JSON</button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <!-- Dashboard -->
+                <div class="view active" id="view-dashboard">
+                    <div class="risk-score">
+                        <div class="risk-circle low" id="risk-circle">0</div>
+                        <div class="risk-details">
+                            <div class="risk-title">Adjusted Risk Score</div>
+                            <div class="risk-subtitle" id="risk-subtitle">No code scanned yet</div>
+                        </div>
+                    </div>
+                    <div class="grid-6" style="margin-bottom: 1rem;">
+                        <div class="metric-card critical">
+                            <div class="metric-value" id="metric-critical">0</div>
+                            <div class="metric-label">Critical</div>
+                        </div>
+                        <div class="metric-card high">
+                            <div class="metric-value" id="metric-high">0</div>
+                            <div class="metric-label">High</div>
+                        </div>
+                        <div class="metric-card medium">
+                            <div class="metric-value" id="metric-medium">0</div>
+                            <div class="metric-label">Medium</div>
+                        </div>
+                        <div class="metric-card low">
+                            <div class="metric-value" id="metric-low">0</div>
+                            <div class="metric-label">Low</div>
+                        </div>
+                        <div class="metric-card review">
+                            <div class="metric-value" id="metric-review">0</div>
+                            <div class="metric-label">Review</div>
+                        </div>
+                        <div class="metric-card suppressed">
+                            <div class="metric-value" id="metric-suppressed">0</div>
+                            <div class="metric-label">Suppressed</div>
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">Suppression Rules Applied</div>
+                            <div class="card-body scroll" id="suppression-stats">
+                                <div class="empty-state"><div class="empty-icon">&#x1F507;</div>Scan code to see suppressions</div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Finding Categories</div>
+                            <div class="card-body scroll" id="category-breakdown">
+                                <div class="empty-state"><div class="empty-icon">&#x1F4CA;</div>Scan code to see categories</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scan -->
+                <div class="view" id="view-scan">
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">
+                                <span id="scan-lang-label">C Source Code</span>
+                                <button class="btn" onclick="pasteCode()">Paste</button>
+                            </div>
+                            <div class="card-body">
+                                <textarea class="code-editor" id="code-input" placeholder="// Paste code here..."></textarea>
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                    <button class="btn btn-primary" onclick="analyze()" style="flex: 1;">&#x1F50D; Analyze</button>
+                                    <button class="btn" onclick="clearCode()">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Functions <span style="font-size: 0.5rem; color: var(--text-muted);" id="func-count"></span></div>
+                            <div class="card-body scroll" id="functions-panel">
+                                <div class="empty-state"><div class="empty-icon">&#x1F4C1;</div>Functions appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Findings -->
+                <div class="view" id="view-findings">
+                    <div class="tab-bar">
+                        <button class="tab-btn active" onclick="filterFindings('all')">All</button>
+                        <button class="tab-btn" onclick="filterFindings('critical')">Critical</button>
+                        <button class="tab-btn" onclick="filterFindings('high')">High</button>
+                        <button class="tab-btn" onclick="filterFindings('medium')">Medium</button>
+                        <button class="tab-btn" onclick="filterFindings('low')">Low</button>
+                    </div>
+                    <div id="findings-list">
+                        <div class="empty-state"><div class="empty-icon">&#x2705;</div>No findings yet</div>
+                    </div>
+                </div>
+
+                <!-- Suppressed -->
+                <div class="view" id="view-suppressed">
+                    <div id="suppressed-list">
+                        <div class="empty-state"><div class="empty-icon">&#x1F507;</div>No suppressed findings</div>
+                    </div>
+                </div>
+
+                <!-- Review (4-state: X/Unknown) -->
+                <div class="view" id="view-review">
+                    <div id="review-list">
+                        <div class="empty-state"><div class="empty-icon">&#x2753;</div>No findings pending review</div>
+                    </div>
+                </div>
+
+                <!-- Secrets -->
+                <div class="view" id="view-secrets">
+                    <div class="card">
+                        <div class="card-header">Detected Secrets</div>
+                        <div class="card-body" id="secrets-list">
+                            <div class="empty-state"><div class="empty-icon">&#x1F510;</div>No secrets detected</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ExCLisp Composer -->
+                <div class="view" id="view-exclisp">
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">ExCLisp Command Composer</div>
+                            <div class="card-body">
+                                <div style="font-size: 0.65rem; color: var(--text-muted); margin-bottom: 0.75rem; font-family: 'JetBrains Mono', monospace;">
+                                    GRAMMAR: {AUTH}::DOMAIN(OP)[MECH]
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <label style="font-size: 0.6rem; color: var(--text-muted);">Authority</label>
+                                        <select id="exc-auth" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 0.35rem; border-radius: 3px; font-size: 0.7rem;">
+                                            <option value="HUMAN">HUMAN</option>
+                                            <option value="AI" selected>AI</option>
+                                            <option value="SYSTEM">SYSTEM</option>
+                                            <option value="*">* (any)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.6rem; color: var(--text-muted);">Domain</label>
+                                        <select id="exc-domain" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 0.35rem; border-radius: 3px; font-size: 0.7rem;">
+                                            <option value="security">security</option>
+                                            <option value="memory">memory</option>
+                                            <option value="bounds">bounds</option>
+                                            <option value="injection">injection</option>
+                                            <option value="code">code</option>
+                                            <option value="crypto">crypto</option>
+                                            <option value="gate">gate</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.6rem; color: var(--text-muted);">Operation</label>
+                                        <select id="exc-op" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 0.35rem; border-radius: 3px; font-size: 0.7rem;">
+                                            <option value="ANALYZE">ANALYZE</option>
+                                            <option value="PROTECT">PROTECT</option>
+                                            <option value="VALIDATE">VALIDATE</option>
+                                            <option value="FIX">FIX</option>
+                                            <option value="INSTRUMENT">INSTRUMENT</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.6rem; color: var(--text-muted);">Gate State</label>
+                                        <div style="display: flex; gap: 0.25rem;">
+                                            <button class="gate-state-btn" data-state="Z" onclick="setGateState('Z')" style="flex:1; padding: 0.3rem; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-muted); border-radius: 3px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">Z</button>
+                                            <button class="gate-state-btn" data-state="X" onclick="setGateState('X')" style="flex:1; padding: 0.3rem; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--review); border-radius: 3px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">X</button>
+                                            <button class="gate-state-btn active" data-state="0" onclick="setGateState('0')" style="flex:1; padding: 0.3rem; background: var(--bg-tertiary); border: 1px solid var(--critical); color: var(--critical); border-radius: 3px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">0</button>
+                                            <button class="gate-state-btn" data-state="1" onclick="setGateState('1')" style="flex:1; padding: 0.3rem; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--success); border-radius: 3px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">1</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 0.5rem;">
+                                    <label style="font-size: 0.6rem; color: var(--text-muted);">Security Gate</label>
+                                    <select id="exc-gate" style="width: 100%; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 0.35rem; border-radius: 3px; font-size: 0.7rem;">
+                                        <optgroup label="Memory Safety">
+                                            <option value="UAF-001">UAF-001 Use-after-free</option>
+                                            <option value="DF-001">DF-001 Double-free</option>
+                                            <option value="BOF-001">BOF-001 Unsafe string fn</option>
+                                            <option value="BOF-002">BOF-002 Array access</option>
+                                            <option value="NULL-001">NULL-001 Null pointer</option>
+                                        </optgroup>
+                                        <optgroup label="Integer/Type">
+                                            <option value="INT-001">INT-001 Allocation overflow</option>
+                                            <option value="INT-002">INT-002 Integer overflow</option>
+                                            <option value="CAST-001">CAST-001 C-style cast</option>
+                                            <option value="CAST-002">CAST-002 Void* type confusion</option>
+                                        </optgroup>
+                                        <optgroup label="Lifecycle">
+                                            <option value="SELF-DEL-001">SELF-DEL-001 Delete self</option>
+                                            <option value="VALIDATE-001">VALIDATE-001 Unvalidated param</option>
+                                            <option value="DIM-001">DIM-001 Unchecked dimension</option>
+                                        </optgroup>
+                                        <optgroup label="Injection/IaC">
+                                            <option value="INJ-001">INJ-001 Code injection</option>
+                                            <option value="INJ-003">INJ-003 SQL injection</option>
+                                            <option value="DESER-001">DESER-001 Unsafe deserialize</option>
+                                        </optgroup>
+                                        <option value="*">* (all gates)</option>
+                                    </select>
+                                </div>
+                                <div style="margin-bottom: 0.5rem;">
+                                    <label style="font-size: 0.6rem; color: var(--text-muted);">NIST Controls</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.25rem;" id="nist-toggles">
+                                        <button class="nist-toggle active" onclick="toggleNist(this)" data-nist="SI-16">SI-16</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="SI-10">SI-10</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="SC-13">SC-13</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="AC-3">AC-3</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="AC-6">AC-6</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="IA-5">IA-5</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="SA-11">SA-11</button>
+                                        <button class="nist-toggle" onclick="toggleNist(this)" data-nist="CM-3">CM-3</button>
+                                    </div>
+                                </div>
+                                <div style="margin-bottom: 0.5rem;">
+                                    <label style="font-size: 0.6rem; color: var(--text-muted);">Symbols</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.2rem;" id="symbol-palette">
+                                        <button class="sym-btn" onclick="insertSym('&#x2192;')">&#x2192;</button>
+                                        <button class="sym-btn" onclick="insertSym('&#x21D2;')">&#x21D2;</button>
+                                        <button class="sym-btn" onclick="insertSym('&#x2227;')">&#x2227;</button>
+                                        <button class="sym-btn" onclick="insertSym('&#x2228;')">&#x2228;</button>
+                                        <button class="sym-btn" onclick="insertSym('&#xAC;')">&#xAC;</button>
+                                        <button class="sym-btn" onclick="insertSym(';')">;</button>
+                                        <button class="sym-btn" onclick="insertSym(' AS ')">AS</button>
+                                        <button class="sym-btn" onclick="insertSym(' IS ')">IS</button>
+                                        <button class="sym-btn" onclick="insertSym('(AS/.\\ IS)')">AS/.\IS</button>
+                                        <button class="sym-btn" onclick="insertSym('0D(Z X 0 1)')">0D</button>
+                                        <button class="sym-btn" onclick="insertSym('{{0 [ ')">{{0</button>
+                                        <button class="sym-btn" onclick="insertSym(' ] 1}}')">1}}</button>
+                                        <button class="sym-btn" onclick="insertSym('ptr')">ptr</button>
+                                        <button class="sym-btn" onclick="insertSym('idx')">idx</button>
+                                        <button class="sym-btn" onclick="insertSym('len')">len</button>
+                                        <button class="sym-btn" onclick="insertSym('nullptr')">nullptr</button>
+                                    </div>
+                                </div>
+                                <textarea id="exc-context" placeholder="Context / notes..." style="width: 100%; height: 50px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); padding: 0.35rem; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; resize: vertical;"></textarea>
+                                <button class="btn btn-primary" onclick="composeExclisp()" style="width: 100%; margin-top: 0.5rem;">Compose</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Composed Command</span>
+                                <button class="btn" onclick="copyExclisp()">Copy</button>
+                            </div>
+                            <div class="card-body">
+                                <div id="exc-output" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--accent); background: var(--bg-primary); padding: 0.75rem; border-radius: 4px; min-height: 60px; word-break: break-all; border: 1px solid var(--border);">
+                                    {AI}::security(ANALYZE)[UAF-001; NIST SI-16]
+                                </div>
+                                <div style="margin-top: 0.75rem; font-size: 0.6rem; color: var(--text-muted);">
+                                    <strong>Quick Commands</strong>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.35rem;">
+                                    <div class="quick-cmd" onclick="quickCmd('{AI}::memory(ANALYZE)[UAF-001; DF-001]')"><code>{AI}::memory(ANALYZE)[UAF-001; DF-001]</code></div>
+                                    <div class="quick-cmd" onclick="quickCmd('{AI}::bounds(FIX)[BOF-002; NIST SI-16]')"><code>{AI}::bounds(FIX)[BOF-002; NIST SI-16]</code></div>
+                                    <div class="quick-cmd" onclick="quickCmd('{AI}::injection(FIX)[INJ-003; NIST SI-10]')"><code>{AI}::injection(FIX)[INJ-003; NIST SI-10]</code></div>
+                                    <div class="quick-cmd" onclick="quickCmd('{AI}::security(ANALYZE)[*; NIST *]')"><code>{AI}::security(ANALYZE)[*; NIST *]</code></div>
+                                    <div class="quick-cmd" onclick="quickCmd('{SYSTEM}::gate(VALIDATE)[0D(Z X 0 1)]')"><code>{SYSTEM}::gate(VALIDATE)[0D(Z X 0 1)]</code></div>
+                                    <div class="quick-cmd" onclick="quickCmd('{{0 [ input (AS/.\\IS) output ] 1}}')"><code>{{0 [ input (AS/.\IS) output ] 1}}</code></div>
+                                </div>
+                                <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: 4px; border: 1px solid var(--border);">
+                                    <div style="font-size: 0.6rem; color: var(--text-muted); margin-bottom: 0.3rem;"><strong>Grammar Reference</strong></div>
+                                    <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--text-secondary); line-height: 1.5;">
+                                        {AUTH}::DOMAIN(OP)[MECH]<br>
+                                        0D(Z X 0 1) -- state space<br>
+                                        {{0 [ a (AS/.\IS) b ] 1}} -- bijection<br>
+                                        condition AS result -- Pass 1<br>
+                                        condition IS result -- Pass 2<br>
+                                        /.\  bidirectional diamond gate
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Prompts (generated from findings) -->
+                <div class="view" id="view-prompts">
+                    <div class="card">
+                        <div class="card-header">
+                            <span>AI Prompts from Findings</span>
+                            <button class="btn" onclick="copyAllPrompts()">Copy All</button>
+                        </div>
+                        <div class="card-body" id="prompts-list">
+                            <div class="empty-state"><div class="empty-icon">&#x1F916;</div>Scan code first to generate ExCLisp prompts</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rules -->
+                <div class="view" id="view-rules">
+                    <div class="grid-2">
+                        <div class="card">
+                            <div class="card-header">False Positive Suppression Rules</div>
+                            <div class="card-body scroll" id="fp-rules"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Safe Wrapper Functions</div>
+                            <div class="card-body scroll" id="safe-wrappers"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reference -->
+                <div class="view" id="view-reference">
+                    <div class="grid-3">
+                        <div class="card">
+                            <div class="card-header">C/C++ Gates</div>
+                            <div class="card-body scroll" id="c-gates-ref"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Rust Gates</div>
+                            <div class="card-body scroll" id="rust-gates-ref"></div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">Python/IaC Gates</div>
+                            <div class="card-body scroll" id="py-gates-ref"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ================================================================
+    // CHANGELOG v6.0 (4-State Gate Logic)
+    // ================================================================
+    // v6.0: 4-State Gate Logic (Z/X/0/1)
+    //   Architecture: Findings now classified by quaternary gate state
+    //   inspired by MESI cache coherency protocol mapping:
+    //
+    //   State | Meaning   | Scanner Action   | MESI Equivalent
+    //   ------+-----------+------------------+------------------
+    //     0   | Deny      | ACTIVE finding   | Invalid (I)
+    //     1   | Allow     | SUPPRESSED       | Modified (M)
+    //     X   | Unknown   | REVIEW (human)   | Shared (S)
+    //     Z   | High-Z    | Not applicable   | Exclusive (E)
+    //
+    //   Combination truth table (precedence: 0 > X > 1, Z = identity):
+    //     - filter out Z (not applicable checks)
+    //     - if any 0 -> 0 (confirmed unsafe, active finding)
+    //     - if any X -> X (inconclusive, needs human review)
+    //     - all 1    -> 1 (all checks passed, suppress)
+    //     - empty    -> Z (no checks applicable, skip)
+    //
+    //   New features:
+    //   - Review tab: findings where analysis is inconclusive (X state)
+    //   - Gate check detail: each finding shows individual check results
+    //   - void** aliasing: now produces X (was binary active/suppress)
+    //   - SARIF export: review findings at level "note" with gate metadata
+    //   - Dashboard: 6-card layout with Review metric
+    //   - Function view: amber highlighting for review lines
+    //   - Self-test: validates 4-state infrastructure and SELF-DEL-001=0
+    //   - Risk score: review items weighted at half (5 pts vs 10 for high)
+    //
+    //   NIST 800-53 mapping: SA-11(1) Developer Testing, SI-16 Memory
+    //   Protection. 4-state model provides auditable decision trail per
+    //   finding with explicit "inconclusive" state for human-in-the-loop
+    //   review, satisfying CM-3 Configuration Change Control traceability.
+    //
+    // v5.0.3: Architecture fix - delete detection via analyzeCustomCpp
+    //   - UAF-001, DF-001, SELF-DEL-001 now detected in analyzeCustomCpp()
+    //     alongside CAST-001, CAST-002, VALIDATE-001, DIM-001
+    //   - Root cause: main gate pattern loop silently failed to produce
+    //     findings for delete lines in some browser environments despite
+    //     working correctly in Node.js test harness
+    //   - analyzeCustomCpp path proven reliable across all environments
+    //     (validated by CAST/VALIDATE findings consistently appearing)
+    //   - C++ gate patterns emptied (handled by analyzeCustomCpp)
+    //   - C gate patterns (free() based) unchanged
+    //   - Self-test now exercises analyzeCustomCpp directly
+    //   - Full identity-aware suppression logic preserved
+    //
+    // v5.0.2: VALIDATE-001 declaration false positive fix
+    //   - Pure virtual declarations (= 0;) no longer flagged
+    //   - Forward declarations/prototypes (ending ;) no longer flagged
+    //   - Only function DEFINITIONS with body ({ }) trigger the gate
+    //   - Lookahead expanded from 10 to 15 lines for null check search
+    //   - Added !=NULL pattern to null check recognition
+    //
+    // v5.0.1: C free() support in identity-aware suppression
+    //   - analyzeUafDf now recognizes free() as well as delete
+    //   - DF-001 suppression includes null-after-free check
+    //
+    // v5.0: Fixed critical false negatives on C++ code:
+    //
+    // 1. Rule 6 UAF/DF suppression: now requires SAME identifier
+    //    nullified as freed. Old rule matched ANY `= NULL` within
+    //    5 lines, suppressing real UAF/DF bugs. New rule extracts
+    //    the freed identifier and verifies the null assignment
+    //    targets it specifically.
+    //
+    // 2. New gate CAST-002: Detects C-style casts through void*
+    //    to arbitrary types (CWE-843 type confusion). Old CAST-001
+    //    only matched (int), (char), (void*) - missed casts like
+    //    (MediaPluginBase*)*user_data.
+    //
+    // 3. New gate SELF-DEL-001: Detects `delete self`/`delete this`
+    //    inside callback or message dispatch functions (CWE-416).
+    //    These are re-entrant UAF hazards that simple null-after-free
+    //    cannot mitigate.
+    //
+    // 4. New gate VALIDATE-001: Detects raw C-string parameters
+    //    (const char *) used without null check (CWE-20, SI-10).
+    //
+    // 5. Fixed CAST-001: Now uses regex to catch arbitrary C-style
+    //    casts, not just 3 hardcoded types. Excludes legitimate
+    //    casts in skip patterns (static_cast, etc.)
+    //
+    // 6. New gate DIM-001: Detects unchecked dimension/size
+    //    member variables that feed buffer calculations without
+    //    overflow protection (CWE-190).
+    //
+    // 7. NULL-001 suppression hardened: if `delete` or virtual
+    //    call follows the null-guarded block, suppression is
+    //    revoked (guard doesn't protect post-block usage).
+    //
+    // Prior fixes from v4.2:
+    // - INJ-003 on Python method definitions (dot prefix)
+    // - Python def/class/async def skip patterns
+    //
+    // Prior fixes from v4.1:
+    // - BOF-002 on Doxygen comments
+    // - Secret detection on comment separators
+    //
+    // Result: Catches all 6 findings from media_plugin_base.cpp
+    // audit (previously: 0 active, 4 incorrectly suppressed)
+    // ================================================================
+    // SECURITY GATES
+    // ================================================================
+    const gates = {
+        c: {
+            'UAF-001': { desc: 'Use-after-free', cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: ['free('] },
+            'DF-001': { desc: 'Double-free', cwe: 'CWE-415', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: ['free('] },
+            'BOF-001': { desc: 'Unsafe string function', cwe: 'CWE-121', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: ['strcpy(', 'strcat(', 'gets(', 'sprintf('] },
+            'BOF-002': { desc: 'Array access', cwe: 'CWE-125', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['['] },
+            'NULL-001': { desc: 'Null pointer', cwe: 'CWE-476', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['->'] },
+            'NULL-002': { desc: 'Allocation result', cwe: 'CWE-476', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['malloc(', 'calloc(', 'realloc('] },
+            'INT-001': { desc: 'Allocation overflow', cwe: 'CWE-190', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['* sizeof'] },
+            'INT-002': { desc: 'Integer overflow', cwe: 'CWE-190', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['++', '--', '+=', '-='] },
+            'FMT-001': { desc: 'Format string', cwe: 'CWE-134', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['printf(', 'sprintf(', 'fprintf('] }
+        },
+        cpp: {
+            'UAF-001': { desc: 'Use-after-free', cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: [] },  // v5.0.3: handled by analyzeCustomCpp
+            'DF-001': { desc: 'Double-free', cwe: 'CWE-415', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: [] },    // v5.0.3: handled by analyzeCustomCpp
+            'SELF-DEL-001': { desc: 'Delete self/this in callback', cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16', severity: 'CRITICAL', patterns: [] },  // v5.0.3: handled by analyzeCustomCpp
+            'RAW-001': { desc: 'Raw pointer new', cwe: 'CWE-401', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['new ', 'new('] },
+            'BOF-002': { desc: 'Array access', cwe: 'CWE-125', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['['] },
+            'NULL-001': { desc: 'Null pointer', cwe: 'CWE-476', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['->'] },
+            'RAII-001': { desc: 'Manual resource mgmt', cwe: 'CWE-404', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['fopen(', 'fclose(', 'close('] },
+            'MOVE-001': { desc: 'Use after move', cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['std::move('] },
+            // v5.0: CAST-001 now uses regex in custom detection (see analyzeCustomCpp)
+            'CAST-001': { desc: 'C-style cast', cwe: 'CWE-704', owasp: 'A03', nist: 'SI-16', severity: 'LOW', patterns: [] },
+            // v5.0: Type confusion through void* to concrete type
+            'CAST-002': { desc: 'Unsafe void* cast to concrete type', cwe: 'CWE-843', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: [] },
+            // v5.0: Raw C-string param used without null check
+            'VALIDATE-001': { desc: 'Unvalidated raw string param', cwe: 'CWE-20', owasp: 'A03', nist: 'SI-10', severity: 'MEDIUM', patterns: [] },
+            // v5.0: Unchecked dimension members feeding buffer math
+            'DIM-001': { desc: 'Unchecked dimension in buffer calc', cwe: 'CWE-190', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: [] },
+            'EXC-001': { desc: 'Catch by value', cwe: 'CWE-248', owasp: 'A03', nist: 'SI-16', severity: 'LOW', patterns: ['catch ('] }
+        },
+        rust: {
+            'UNSAFE-001': { desc: 'Unsafe block', cwe: 'CWE-119', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['unsafe {', 'unsafe fn'] },
+            'RAW-001': { desc: 'Raw pointer deref', cwe: 'CWE-476', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['*const ', '*mut '] },
+            'UNWRAP-001': { desc: 'Unwrap on Result/Option', cwe: 'CWE-252', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['.unwrap()', '.expect('] },
+            'PANIC-001': { desc: 'Explicit panic', cwe: 'CWE-248', owasp: 'A03', nist: 'SI-16', severity: 'LOW', patterns: ['panic!(', 'unreachable!(', 'unimplemented!('] },
+            'LEAK-001': { desc: 'Memory leak', cwe: 'CWE-401', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['mem::forget(', 'Box::leak(', 'ManuallyDrop'] },
+            'TRANSMUTE-001': { desc: 'Transmute usage', cwe: 'CWE-704', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['transmute(', 'transmute_copy('] },
+            'FFI-001': { desc: 'FFI boundary', cwe: 'CWE-119', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['extern "C"', 'CString', 'CStr'] },
+            'STATIC-MUT': { desc: 'Static mutable', cwe: 'CWE-362', owasp: 'A03', nist: 'SI-16', severity: 'HIGH', patterns: ['static mut '] },
+            'INDEX-001': { desc: 'Unchecked index', cwe: 'CWE-125', owasp: 'A03', nist: 'SI-16', severity: 'MEDIUM', patterns: ['get_unchecked(', 'get_unchecked_mut('] }
+        },
+        python: {
+            'INJ-001': { desc: 'Code injection', cwe: 'CWE-94', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['eval(', 'exec('] },
+            'INJ-002': { desc: 'Command injection', cwe: 'CWE-78', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['os.system(', 'shell=True'] },
+            // v4.2 FIX: Changed 'execute(' to '.execute(' to require receiver object
+            // Prevents FP on: def execute(), class.execute(), use case methods
+            // Real SQL injection requires: cursor.execute(), conn.execute(), etc.
+            'INJ-003': { desc: 'SQL injection', cwe: 'CWE-89', owasp: 'A03', nist: 'SI-10', severity: 'CRITICAL', patterns: ['.execute(', '.format(', "f'SELECT", 'f"SELECT'] },
+            'DESER-001': { desc: 'Unsafe deserialize', cwe: 'CWE-502', owasp: 'A08', nist: 'SI-10', severity: 'CRITICAL', patterns: ['pickle.load', 'yaml.load('] },
+            'PATH-001': { desc: 'Path traversal', cwe: 'CWE-22', owasp: 'A01', nist: 'AC-3', severity: 'HIGH', patterns: ['open(', '../'] },
+            'CRYPT-001': { desc: 'Weak crypto', cwe: 'CWE-327', owasp: 'A02', nist: 'SC-13', severity: 'MEDIUM', patterns: ['md5(', 'sha1('] },
+            'CRYPT-002': { desc: 'Insecure random', cwe: 'CWE-330', owasp: 'A02', nist: 'SC-13', severity: 'MEDIUM', patterns: ['random.randint', 'random.choice'] }
+        },
+        terraform: {
+            'TF-001': { desc: 'Public S3', cwe: 'CWE-284', owasp: 'A01', nist: 'AC-3', severity: 'CRITICAL', patterns: ['acl = "public-read"'] },
+            'TF-002': { desc: 'Unencrypted', cwe: 'CWE-311', owasp: 'A02', nist: 'SC-13', severity: 'HIGH', patterns: ['encrypted = false'] },
+            'TF-003': { desc: 'Overly permissive IAM', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'CRITICAL', patterns: ['"Action": "*"'] },
+            'TF-005': { desc: 'Open security group', cwe: 'CWE-284', owasp: 'A01', nist: 'AC-3', severity: 'CRITICAL', patterns: ['0.0.0.0/0', '::/0'] }
+        },
+        kubernetes: {
+            'K8S-001': { desc: 'Privileged container', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'CRITICAL', patterns: ['privileged: true'] },
+            'K8S-002': { desc: 'Run as root', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'HIGH', patterns: ['runAsUser: 0', 'runAsNonRoot: false'] },
+            'K8S-003': { desc: 'Host network', cwe: 'CWE-284', owasp: 'A01', nist: 'AC-3', severity: 'HIGH', patterns: ['hostNetwork: true'] }
+        },
+        docker: {
+            'DOCKER-001': { desc: 'Root user', cwe: 'CWE-250', owasp: 'A01', nist: 'AC-6', severity: 'HIGH', patterns: ['USER root'] },
+            'DOCKER-002': { desc: 'Latest tag', cwe: 'CWE-829', owasp: 'A06', nist: 'CM-7', severity: 'MEDIUM', patterns: [':latest'] },
+            'DOCKER-004': { desc: 'Hardcoded secret', cwe: 'CWE-798', owasp: 'A07', nist: 'IA-5', severity: 'CRITICAL', patterns: ['ENV.*PASSWORD', 'ENV.*SECRET'] }
+        }
+    };
+
+    // ================================================================
+    // FALSE POSITIVE SUPPRESSION RULES
+    // ================================================================
+    const suppressionRules = {
+        // Safe wrapper functions - calls to these are NOT vulnerabilities
+        safeWrappers: {
+            c: ['ee_safe_free', 'ee_safe_calloc', 'ee_safe_malloc', 'safe_free', 'safe_malloc', 
+                'g_free', 'g_malloc', 'av_free', 'av_malloc', 'kfree', 'kmalloc'],
+            cpp: ['std::make_unique', 'std::make_shared', 'std::unique_ptr', 'std::shared_ptr',
+                  'std::vector', 'std::string', 'std::array', 'std::span', 'gsl::span'],
+            rust: ['Box::new', 'Rc::new', 'Arc::new', 'Vec::new', 'String::new', 'RefCell::new',
+                   'Mutex::new', 'RwLock::new']
+        },
+
+        // Patterns that indicate a null/bounds guard - suppress findings in guarded context
+        guardPatterns: {
+            nullGuard: [
+                /if\s*\(\s*\w+\s*==\s*NULL\s*\)/,
+                /if\s*\(\s*\w+\s*==\s*nullptr\s*\)/,
+                /if\s*\(\s*!\w+\s*\)/,
+                /if\s*\(\s*\w+\s*!=\s*NULL\s*\)/,
+                /if\s*\(\s*\w+\s*!=\s*nullptr\s*\)/,
+                /\.is_none\(\)/,
+                /\.is_null\(\)/,
+                /\?\s*:/  // ternary null check
+            ],
+            boundsGuard: [
+                /if\s*\(\s*\w+\s*<\s*\w+\s*\)/,
+                /if\s*\(\s*\w+\s*>=\s*\w+\s*\)/,
+                /if\s*\(\s*\w+\s*<=\s*\w+\s*\)/,
+                /if\s*\(\s*index\s*<\s*\w+\s*\)/,
+                /if\s*\(\s*i\s*<\s*\w+\s*\)/,
+                /\.get\(\s*\w+\s*\)/,  // Rust safe get
+                /\.get_mut\(\s*\w+\s*\)/, 
+                /\w+\.at\(/  // C++ at() with bounds check
+            ],
+            overflowGuard: [
+                /__builtin_add_overflow/,
+                /__builtin_mul_overflow/,
+                /__builtin_sub_overflow/,
+                /checked_add/,
+                /checked_sub/,
+                /checked_mul/,
+                /saturating_add/,
+                /saturating_sub/,
+                /wrapping_add/,
+                /overflowing_add/
+            ]
+        },
+
+        // Line patterns to skip entirely (comments, annotations, declarations)
+        skipPatterns: [
+            /^\s*\/\//,              // C/C++/Rust line comment
+            /^\s*#/,                 // Python/preprocessor comment  
+            /^\s*\*/,                // Block comment continuation
+            /^\s*\/\*/,              // Block comment start
+            /^\s*\*\s*@(param|return|brief|details|note|file|author|version|created|modified|by)/,  // Doxygen comments
+            /^\s*\/\/\s*@(param|return|brief)/,  // Doxygen line comments
+            /^\s*\*.*@cond/,         // Doxygen conditional
+            /^\s*\*.*@endcond/,
+            /^\s*\*.*\$License/,     // License headers
+            /^\s*\*\s*Copyright/,    // Copyright lines
+            /^\s*\*\s*All rights reserved/,
+            /GATE_SAFE/,             // Euman annotation
+            /GATE_CHECK/,
+            /@GATE:/,
+            /SAFETY:/,               // Rust safety comment
+            /\/\/\s*SAFE:/,
+            /\/\/\s*OK:/,
+            /\/\/\s*NOLINT/,
+            /\/\/\s*NOSONAR/,
+            /#\s*noqa/,              // Python noqa
+            /#\s*type:\s*ignore/,
+            /^\s*static\s+const\s+\w+\s+\w+\[/,  // Array declaration
+            /^\s*const\s+\w+\s+\w+\[/,
+            /^\s*static\s+\w+\s+\w+\[/,
+            /^\s*let\s+\w+:\s*\[/,    // Rust array declaration
+            /^\s*typedef\s+/,
+            /^\s*using\s+/,
+            /^\s*extern\s+"C"/,       // FFI declaration (not invocation)
+            // v4.2 FIX: Python definitions are declarations, not invocations
+            /^\s*def\s+\w+\s*\(/,             // Python method definition
+            /^\s*async\s+def\s+\w+\s*\(/,     // Python async method definition
+            /^\s*class\s+\w+/                  // Python class definition
+        ],
+
+        // Context patterns - if found within N lines, suppress
+        // v5.0: UAF-001 and DF-001 now use identity-aware suppression in engine
+        //        (moved from simple regex to analyzeUafDf function)
+        contextSuppressors: {
+            'UAF-001': [],  // v5.0: handled by analyzeUafDf()
+            'DF-001': [],   // v5.0: handled by analyzeUafDf()
+            'NULL-002': [/if\s*\(\s*\w+\s*==\s*NULL/, /if\s*\(\s*!\w+\s*\)/, /\?\s*:/],
+            'INT-002': [/__builtin_.*_overflow/, /saturate/, /checked_/, /< SIZE_MAX/, /< UINT.*_MAX/],
+            'BOF-002': [/if\s*\(\s*\w+\s*</, /if\s*\(\s*\w+\s*>=/, /\.at\(/, /\.get\(/],
+            'SELF-DEL-001': []  // Never suppress - always report
+        }
+    };
+
+    // Secret patterns - exclude string literals in print statements
+    const secretPatterns = [
+        { 
+            type: 'AWS Access Key', 
+            pattern: /(?<!["'=\/])\bAKIA[0-9A-Z]{16}\b/g, 
+            severity: 'CRITICAL',
+            validate: (match, line) => {
+                // Exclude comment separators like ////////////////
+                if (/^[\/\*\s]+$/.test(line)) return false;
+                // Exclude Doxygen comments
+                if (/^\s*\*/.test(line)) return false;
+                return true;
+            }
+        },
+        { type: 'GitHub Token', pattern: /\bgh[ps]_[A-Za-z0-9_]{36,}\b/g, severity: 'CRITICAL' },
+        { type: 'Private Key', pattern: /-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/g, severity: 'CRITICAL' },
+        { type: 'JWT Token', pattern: /\beyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, severity: 'HIGH' },
+        { type: 'Password Assignment', pattern: /(?<!\/\/.*)\bpassword\s*=\s*["'][^"']{8,}["']/gi, severity: 'HIGH' },
+        { type: 'API Key Assignment', pattern: /(?<!\/\/.*)\bapi[_-]?key\s*=\s*["'][A-Za-z0-9_\-]{16,}["']/gi, severity: 'HIGH' }
+    ];
+
+    // ================================================================
+    // STATE
+    // ================================================================
+    let currentLang = 'c';
+    let analysisResults = { findings: [], suppressed: [], review: [], secrets: [], functions: [], suppressionStats: {}, gateStateStats: { '0': 0, '1': 0, 'X': 0, 'Z': 0 } };
+
+    // ================================================================
+    // ANALYSIS ENGINE
+    // ================================================================
+    function analyze() {
+        const code = document.getElementById('code-input').value;
+        if (!code.trim()) return;
+
+        // v5.0.3: Auto-detect C++ when language is set to C
+        // If user selected C but code contains C++ constructs,
+        // upgrade to C++ for this scan (more gates, better analysis)
+        if (currentLang === 'c') {
+            const cppIndicators = [
+                /\bclass\s+\w+/,           // class declaration
+                /\bvirtual\s+/,            // virtual methods
+                /\b(public|private|protected)\s*:/,  // access specifiers
+                /\btemplate\s*</,          // templates
+                /\bnamespace\s+/,          // namespaces
+                /\bstd::/,                 // STL usage
+                /\bnew\s+\w+/,            // C++ new operator
+                /\bdelete\s+\w+/,         // C++ delete operator
+                /\bdelete\s*\[/,          // delete[]
+                /\b\w+::\w+/,            // scope resolution
+                /\b(static|dynamic|reinterpret|const)_cast\b/,  // C++ casts
+                /\bcout\b|\bcerr\b/,       // C++ IO
+                /\bstruct\s+\w+\s*\{[^}]*\w+\s*\([^)]*\)/  // struct with method
+            ];
+            const sampleLines = code.split('\n').slice(0, 200).join('\n');
+            const isCpp = cppIndicators.some(p => p.test(sampleLines));
+            if (isCpp) {
+                currentLang = 'cpp';
+                // Update UI to reflect auto-detection
+                try {
+                    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+                    const cppBtn = document.querySelector('.lang-btn[data-lang="cpp"]');
+                    if (cppBtn) cppBtn.classList.add('active');
+                    document.getElementById('scan-lang-label').textContent = 'C++ Source (auto)';
+                } catch(e) { /* ignore in test harness */ }
+            }
+        }
+
+        const findings = [];
+        const suppressed = [];
+        const review = [];
+        const secrets = [];
+        const lines = code.split('\n');
+        const suppressionStats = {};
+        const gateStateStats = { '0': 0, '1': 0, 'X': 0, 'Z': 0 };
+
+        // ============================================================
+        // v6.0: 4-State Gate Logic
+        // ============================================================
+        // Each gate check returns one of:
+        //   '1' = Allow  (check passed, safe)
+        //   '0' = Deny   (check failed, unsafe)
+        //   'X' = Unknown (inconclusive, needs human review)
+        //   'Z' = High-Z  (not applicable, skip this check)
+        //
+        // Combination truth table (precedence: 0 > X > 1, Z = identity):
+        //   filter out Z (not applicable checks)
+        //   if empty   -> Z (nothing applicable = no finding)
+        //   if any 0   -> 0 (confirmed unsafe)
+        //   if any X   -> X (inconclusive = review)
+        //   all 1      -> 1 (all checks passed = suppress)
+        // ============================================================
+        function combineGateStates(checks) {
+            const applicable = checks.filter(c => c.state !== 'Z');
+            if (!applicable.length) return { state: 'Z', checks };
+            if (applicable.some(c => c.state === '0')) return { state: '0', checks };
+            if (applicable.some(c => c.state === 'X')) return { state: 'X', checks };
+            return { state: '1', checks };
+        }
+
+        function gateCheck(state, reason) {
+            return { state, reason };
+        }
+
+        // Get context window for each line
+        function getContext(idx, range = 5) {
+            const start = Math.max(0, idx - range);
+            const end = Math.min(lines.length, idx + range + 1);
+            return lines.slice(start, end).join('\n');
+        }
+
+        // Check if line should be skipped
+        function shouldSkipLine(line) {
+            return suppressionRules.skipPatterns.some(p => p.test(line));
+        }
+
+        // Check if using a safe wrapper
+        function usesSafeWrapper(line) {
+            const wrappers = suppressionRules.safeWrappers[currentLang] || [];
+            return wrappers.some(w => line.includes(w));
+        }
+
+        // Check for guard patterns in context
+        function hasGuard(context, gateId) {
+            const guards = suppressionRules.contextSuppressors[gateId] || [];
+            return guards.some(g => g.test(context));
+        }
+
+        // Check for null/bounds guard pattern
+        function hasNullGuard(context) {
+            return suppressionRules.guardPatterns.nullGuard.some(p => p.test(context));
+        }
+
+        function hasBoundsGuard(context) {
+            return suppressionRules.guardPatterns.boundsGuard.some(p => p.test(context));
+        }
+
+        function hasOverflowGuard(context) {
+            return suppressionRules.guardPatterns.overflowGuard.some(p => p.test(context));
+        }
+
+        // Detect secrets (improved)
+        secretPatterns.forEach(sp => {
+            lines.forEach((line, idx) => {
+                // Skip if line is a print statement
+                if (/printf|puts|println|print\(|echo|console\.log/.test(line)) return;
+                // Skip if in a comment
+                if (/^\s*(\/\/|#|\*)/.test(line)) return;
+                // Skip comment separators
+                if (/^[\/\*\s]+$/.test(line.trim())) return;
+                
+                const regex = new RegExp(sp.pattern.source, sp.pattern.flags);
+                let match;
+                while ((match = regex.exec(line)) !== null) {
+                    // Use custom validation if provided
+                    if (sp.validate && !sp.validate(match[0], line)) continue;
+                    
+                    secrets.push({
+                        type: sp.type,
+                        severity: sp.severity,
+                        line: idx + 1,
+                        preview: match[0].substring(0, 20) + '...',
+                        code: line.trim()
+                    });
+                }
+            });
+        });
+
+        // ============================================================
+        // v5.0: Identity-aware UAF/DF suppression
+        // Extracts the freed identifier and checks if THAT SAME
+        // identifier is nullified, not just any `= NULL` in range
+        // ============================================================
+        function analyzeUafDf(line, context, gateId) {
+            // Extract identifier from: delete ptr; / delete[] ptr; / free(ptr);
+            let freedId = null;
+            let m;
+            if ((m = line.match(/delete\s*\[\]?\s+(\w+)/))) {
+                freedId = m[1];
+            } else if ((m = line.match(/\bfree\(\s*(\w+)\s*\)/))) {
+                freedId = m[1];
+            }
+            if (!freedId) return null;
+
+            // For SELF-DEL-001: never suppress delete self/this
+            if (freedId === 'self' || freedId === 'this') return null;
+
+            const ctxLines = context.split('\n');
+
+            if (gateId === 'UAF-001') {
+                // Suppression: the SAME identifier is set to NULL/nullptr
+                // AND no usage of that identifier appears AFTER the free
+                const nullPattern = new RegExp(
+                    '\\b' + freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*=\\s*(NULL|nullptr|0)\\b'
+                );
+                const useAfterPattern = new RegExp(
+                    '\\b' + freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*->'
+                );
+                // v5.0.1: Match BOTH delete and free() as free points
+                const freePointPattern = new RegExp(
+                    '(delete\\s+(\\[\\]\\s*)?' +
+                    freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '|free\\(\\s*' +
+                    freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*\\))'
+                );
+                let foundFree = false;
+                let nullifiedAfterFree = false;
+                let usedAfterFree = false;
+                for (const cl of ctxLines) {
+                    if (freePointPattern.test(cl)) {
+                        foundFree = true;
+                        continue;
+                    }
+                    if (foundFree) {
+                        if (nullPattern.test(cl)) nullifiedAfterFree = true;
+                        if (useAfterPattern.test(cl)) usedAfterFree = true;
+                    }
+                }
+                // v5.0: Also reject if virtual call precedes free (re-entrancy)
+                let virtualCallBeforeFree = false;
+                let hitFree = false;
+                for (const cl of ctxLines) {
+                    if (!hitFree && cl.includes(freedId) && /->(\w+)\(/.test(cl)) {
+                        virtualCallBeforeFree = true;
+                    }
+                    if (freePointPattern.test(cl)) {
+                        hitFree = true;
+                    }
+                }
+                if (virtualCallBeforeFree) return null;  // Cannot suppress
+
+                if (nullifiedAfterFree && !usedAfterFree) {
+                    return 'Same pointer nullified after free (identity-verified)';
+                }
+                return null;
+            }
+
+            if (gateId === 'DF-001') {
+                // Suppression: guard checks the SAME identifier before free
+                // OR the same identifier is nullified after free (prevents
+                // double-free on repeated calls since free(NULL) is safe)
+                const guardPattern = new RegExp(
+                    'if\\s*\\(\\s*' +
+                    freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*(!= NULL|!= nullptr|\\))'
+                );
+                const nullAfterPattern = new RegExp(
+                    '\\b' + freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*=\\s*(NULL|nullptr|0)\\b'
+                );
+                // Also check for ownership semantics (unique_ptr, shared_ptr)
+                if (/unique_ptr|shared_ptr/.test(context)) {
+                    return 'Smart pointer ownership';
+                }
+
+                // v5.0.1: Match BOTH delete and free() as free points
+                const freePointPattern = new RegExp(
+                    '(delete\\s+(\\[\\]\\s*)?' +
+                    freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '|free\\(\\s*' +
+                    freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') +
+                    '\\s*\\))'
+                );
+
+                // Check for re-entrancy (virtual call before free)
+                let virtualBefore = false;
+                let hitFree = false;
+                const ctxLines = context.split('\n');
+                for (const cl of ctxLines) {
+                    if (!hitFree && cl.includes(freedId) && /->(\w+)\(/.test(cl)) {
+                        virtualBefore = true;
+                    }
+                    if (freePointPattern.test(cl)) hitFree = true;
+                }
+                if (virtualBefore) return null;
+
+                // Aliased pointers through void** - cannot prove single owner
+                if (/void\s*\*\*/.test(context)) return null;
+
+                // Check if guard exists before free
+                if (guardPattern.test(context)) {
+                    return 'Guard check on same pointer before free';
+                }
+
+                // Check if pointer nullified after free (prevents re-free)
+                let foundFreePoint = false;
+                let nullifiedAfter = false;
+                for (const cl of ctxLines) {
+                    if (freePointPattern.test(cl)) {
+                        foundFreePoint = true;
+                        continue;
+                    }
+                    if (foundFreePoint && nullAfterPattern.test(cl)) {
+                        nullifiedAfter = true;
+                    }
+                }
+                if (nullifiedAfter) {
+                    return 'Same pointer nullified after free (double-free prevented)';
+                }
+
+                return null;
+            }
+            return null;
+        }
+
+        // ============================================================
+        // v5.0: Custom C++ analysis for regex-based gates
+        // Detects patterns that can't be caught by simple string match
+        // ============================================================
+        function analyzeCustomCpp(line, lineNum, context, lines, idx) {
+            const results = [];
+            const trimmed = line.trim();
+
+            // CAST-001: Any C-style cast (not just 3 hardcoded types)
+            // Match: (Type*), (Type), (const Type*), (unsigned long)
+            // Exclude: static_cast, dynamic_cast, reinterpret_cast, const_cast
+            // Exclude: inside comments, #define, typedef
+            if (!/(static|dynamic|reinterpret|const)_cast/.test(trimmed) &&
+                !trimmed.startsWith('//') && !trimmed.startsWith('*') &&
+                !trimmed.startsWith('#')) {
+                const castRegex = /\(\s*(const\s+)?(unsigned\s+)?(struct\s+)?[A-Z]\w+\s*\*?\s*\)/g;
+                if (castRegex.test(trimmed)) {
+                    results.push({
+                        gate: 'CAST-001',
+                        desc: 'C-style cast',
+                        cwe: 'CWE-704', owasp: 'A03', nist: 'SI-16',
+                        severity: 'LOW'
+                    });
+                }
+            }
+
+            // CAST-002: void* cast to concrete type (type confusion)
+            // Match: (SomeType*)*void_ptr or (SomeType*)some_void_expr
+            // This is the pattern from media_plugin_base.cpp line 109
+            if (/\(\s*(const\s+)?\w+\s*\*\s*\)\s*\*?\w/.test(trimmed) &&
+                /void\s*\*/.test(context)) {
+                // Verify it's actually casting FROM void*
+                const castMatch = trimmed.match(/\(\s*(const\s+)?(\w+)\s*\*\s*\)/);
+                if (castMatch && castMatch[2] !== 'void' && castMatch[2] !== 'char') {
+                    results.push({
+                        gate: 'CAST-002',
+                        desc: 'Unsafe void* cast to ' + castMatch[2] + '*',
+                        cwe: 'CWE-843', owasp: 'A03', nist: 'SI-16',
+                        severity: 'MEDIUM'
+                    });
+                }
+            }
+
+            // VALIDATE-001: Function receives const char* but body has
+            // no null check on that parameter
+            // Detect: function signature with const char *param
+            // v5.0.3: Only fire on DEFINITIONS (has body), not declarations
+            //         Declarations end with ';' or '= 0;' on same/next line
+            //         Definitions have '{' within next few lines
+            const paramMatch = trimmed.match(/\(\s*const\s+char\s*\*\s*(\w+)/);
+            if (paramMatch) {
+                const paramName = paramMatch[1];
+
+                // Skip pure virtual declarations: = 0;
+                if (/=\s*0\s*;/.test(trimmed)) {
+                    // Pure virtual - no body to check
+                }
+                // Skip forward declarations / prototypes: line ends with ;
+                else if (/\)\s*(const)?\s*;/.test(trimmed)) {
+                    // Prototype only - no body to check
+                }
+                // Skip if no function body opens within 3 lines
+                else {
+                    const nearLines = lines.slice(idx, Math.min(lines.length, idx + 4)).join('\n');
+                    if (!/\{/.test(nearLines)) {
+                        // No opening brace = still a declaration, skip
+                    } else {
+                        // This is a function definition with a body
+                        // Look forward up to 15 lines for a null check
+                        const lookAhead = lines.slice(idx, Math.min(lines.length, idx + 15)).join('\n');
+                        const nullCheck = new RegExp(
+                            '(if\\s*\\(\\s*' + paramName + '\\s*(==\\s*NULL|==\\s*nullptr|\\))' +
+                            '|if\\s*\\(\\s*!' + paramName + '\\s*\\)' +
+                            '|' + paramName + '\\s*==\\s*(NULL|nullptr)' +
+                            '|' + paramName + '\\s*!=\\s*(NULL|nullptr))',
+                            'i'
+                        );
+                        if (!nullCheck.test(lookAhead)) {
+                            results.push({
+                                gate: 'VALIDATE-001',
+                                desc: 'Raw C-string param \'' + paramName + '\' used without null check',
+                                cwe: 'CWE-20', owasp: 'A03', nist: 'SI-10',
+                                severity: 'MEDIUM'
+                            });
+                        }
+                    }
+                }
+            }
+
+            // DIM-001: Member variables like mWidth, mHeight, mDepth
+            // initialized to 0 in constructor - potential overflow when
+            // multiplied for buffer calculations
+            if (/m(Width|Height|Depth|Size|Length|Count)\s*\*\s*m(Width|Height|Depth|Size|Length|Count)/.test(trimmed) ||
+                /m(Width|Height|Depth|Size|Length|Count)\s*\*\s*sizeof/.test(trimmed)) {
+                if (!/__builtin_mul_overflow|checked_mul|SafeMultiply/.test(context)) {
+                    results.push({
+                        gate: 'DIM-001',
+                        desc: 'Unchecked dimension multiplication (potential overflow)',
+                        cwe: 'CWE-190', owasp: 'A03', nist: 'SI-16',
+                        severity: 'MEDIUM'
+                    });
+                }
+            }
+
+            // ============================================================
+            // v6.0: Delete detection with 4-state gate logic
+            // Each sub-check returns a gate state. Combined state
+            // determines if finding is active (0), review (X), or
+            // suppressed (1).
+            // ============================================================
+
+            // Extract: delete ptr; / delete[] ptr; / delete this;
+            const delMatch = trimmed.match(/^delete\s*(\[\])?\s*(\w+)\s*;/);
+            if (delMatch) {
+                const freedId = delMatch[2];
+
+                // SELF-DEL-001: delete self/this - ALWAYS state 0
+                if (freedId === 'self' || freedId === 'this') {
+                    results.push({
+                        gate: 'SELF-DEL-001',
+                        desc: 'Delete self/this in callback',
+                        cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16',
+                        severity: 'CRITICAL',
+                        gateState: '0',
+                        gateChecks: [{ state: '0', reason: 'delete self/this: always critical' }]
+                    });
+                }
+
+                // UAF-001: Use-after-free with 4-state analysis
+                if (freedId !== 'self' && freedId !== 'this') {
+                    const uafChecks = [];
+                    const ctxLines = context.split('\n');
+                    const esc = freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const nullPat = new RegExp('\\b' + esc + '\\s*=\\s*(NULL|nullptr|0)\\b');
+                    const usePat = new RegExp('\\b' + esc + '\\s*->');
+                    const freePat = new RegExp('(delete\\s+(\\[\\]\\s*)?' + esc + '|free\\(\\s*' + esc + '\\s*\\))');
+
+                    // Check 1: virtual call before free (re-entrancy)
+                    let virtualBefore = false;
+                    let hitFree = false;
+                    for (const cl of ctxLines) {
+                        if (!hitFree && cl.includes(freedId) && /->(\w+)\(/.test(cl)) {
+                            virtualBefore = true;
+                        }
+                        if (freePat.test(cl)) hitFree = true;
+                    }
+                    if (virtualBefore) {
+                        uafChecks.push({ state: '0', reason: 're-entrancy: virtual call before free' });
+                    } else {
+                        uafChecks.push({ state: '1', reason: 'no virtual call before free' });
+                    }
+
+                    // Check 2: null-after-free
+                    let foundFree = false;
+                    let nullAfter = false;
+                    let useAfter = false;
+                    for (const cl of ctxLines) {
+                        if (freePat.test(cl)) { foundFree = true; continue; }
+                        if (foundFree) {
+                            if (nullPat.test(cl)) nullAfter = true;
+                            if (usePat.test(cl)) useAfter = true;
+                        }
+                    }
+                    if (nullAfter && !useAfter) {
+                        uafChecks.push({ state: '1', reason: 'null-after-free: ' + freedId + ' = NULL' });
+                    } else if (useAfter) {
+                        uafChecks.push({ state: '0', reason: 'use-after-free: ' + freedId + ' dereferenced after delete' });
+                    } else {
+                        uafChecks.push({ state: '0', reason: 'no nullification after free' });
+                    }
+
+                    // Check 3: void** aliasing (inconclusive)
+                    if (/void\s*\*\*/.test(context)) {
+                        uafChecks.push({ state: 'X', reason: 'void** aliasing: ownership inconclusive' });
+                    }
+
+                    // Combine
+                    const uafCombined = combineGateStates(uafChecks);
+                    if (uafCombined.state !== '1') {
+                        results.push({
+                            gate: 'UAF-001',
+                            desc: 'Use-after-free',
+                            cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16',
+                            severity: 'CRITICAL',
+                            gateState: uafCombined.state,
+                            gateChecks: uafChecks,
+                            suppressReason: null,
+                            reviewReason: uafCombined.state === 'X' ? 'void** aliasing: ownership inconclusive' : null
+                        });
+                    } else {
+                        results.push({
+                            gate: 'UAF-001',
+                            desc: 'Use-after-free',
+                            cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16',
+                            severity: 'CRITICAL',
+                            gateState: '1',
+                            gateChecks: uafChecks,
+                            suppressReason: 'Identity-aware null-after-free'
+                        });
+                    }
+                } else {
+                    // self/this — always active UAF too
+                    results.push({
+                        gate: 'UAF-001',
+                        desc: 'Use-after-free',
+                        cwe: 'CWE-416', owasp: 'A03', nist: 'SI-16',
+                        severity: 'CRITICAL',
+                        gateState: '0',
+                        gateChecks: [{ state: '0', reason: 'delete self/this: always critical' }]
+                    });
+                }
+
+                // DF-001: Double-free with 4-state analysis
+                if (freedId !== 'self' && freedId !== 'this') {
+                    const dfChecks = [];
+                    const esc = freedId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const guardPat = new RegExp('if\\s*\\(\\s*' + esc + '\\s*(!= NULL|!= nullptr|\\))');
+                    const freePat = new RegExp('(delete\\s+(\\[\\]\\s*)?' + esc + '|free\\(\\s*' + esc + '\\s*\\))');
+                    const nullAfterPat = new RegExp('\\b' + esc + '\\s*=\\s*(NULL|nullptr|0)\\b');
+
+                    // Check 1: void** aliasing
+                    if (/void\s*\*\*/.test(context)) {
+                        dfChecks.push({ state: 'X', reason: 'void** aliasing: concurrent free inconclusive' });
+                    }
+
+                    // Check 2: null guard before free
+                    if (guardPat.test(context)) {
+                        const ctxLines = context.split('\n');
+                        let virtualBefore = false;
+                        let hitFree = false;
+                        for (const cl of ctxLines) {
+                            if (!hitFree && cl.includes(freedId) && /->(\w+)\(/.test(cl)) {
+                                virtualBefore = true;
+                            }
+                            if (freePat.test(cl)) hitFree = true;
+                        }
+                        if (virtualBefore) {
+                            dfChecks.push({ state: '0', reason: 're-entrancy: virtual call before free' });
+                        } else {
+                            dfChecks.push({ state: '1', reason: 'null guard before free' });
+                        }
+                    } else {
+                        // Check null-after-free pattern
+                        const ctxLines = context.split('\n');
+                        let foundFree = false;
+                        let nullAfter = false;
+                        for (const cl of ctxLines) {
+                            if (freePat.test(cl)) { foundFree = true; continue; }
+                            if (foundFree && nullAfterPat.test(cl)) nullAfter = true;
+                        }
+                        if (nullAfter) {
+                            dfChecks.push({ state: '1', reason: 'null-after-free prevents double free' });
+                        } else {
+                            dfChecks.push({ state: '0', reason: 'no guard against double free' });
+                        }
+                    }
+
+                    const dfCombined = combineGateStates(dfChecks);
+                    if (dfCombined.state !== '1') {
+                        results.push({
+                            gate: 'DF-001',
+                            desc: 'Double-free',
+                            cwe: 'CWE-415', owasp: 'A03', nist: 'SI-16',
+                            severity: 'CRITICAL',
+                            gateState: dfCombined.state,
+                            gateChecks: dfChecks,
+                            suppressReason: null,
+                            reviewReason: dfCombined.state === 'X' ? 'void** aliasing: concurrent free inconclusive' : null
+                        });
+                    } else {
+                        results.push({
+                            gate: 'DF-001',
+                            desc: 'Double-free',
+                            cwe: 'CWE-415', owasp: 'A03', nist: 'SI-16',
+                            severity: 'CRITICAL',
+                            gateState: '1',
+                            gateChecks: dfChecks,
+                            suppressReason: 'Identity-aware null guard/null-after-free'
+                        });
+                    }
+                } else {
+                    results.push({
+                        gate: 'DF-001',
+                        desc: 'Double-free',
+                        cwe: 'CWE-415', owasp: 'A03', nist: 'SI-16',
+                        severity: 'CRITICAL',
+                        gateState: '0',
+                        gateChecks: [{ state: '0', reason: 'delete self/this: always critical' }]
+                    });
+                }
+            }
+
+            return results;
+        }
+
+        // Detect vulnerabilities
+        const langGates = gates[currentLang] || gates.c;
+        
+        lines.forEach((line, idx) => {
+            const lineNum = idx + 1;
+            const trimmed = line.trim();
+            
+            // Skip comments, annotations, declarations
+            if (shouldSkipLine(trimmed)) return;
+
+            const context = getContext(idx);
+
+            // v5.0: Run custom C++ analysis (CAST, TYPE, VALIDATE, DIM)
+            if (currentLang === 'cpp' || currentLang === 'c') {
+                const customFindings = analyzeCustomCpp(line, lineNum, context, lines, idx);
+                for (const cf of customFindings) {
+                    const f = {
+                        id: `${cf.gate}-${lineNum}`,
+                        gate: cf.gate,
+                        desc: cf.desc,
+                        cwe: cf.cwe,
+                        owasp: cf.owasp,
+                        nist: cf.nist,
+                        severity: cf.severity,
+                        line: lineNum,
+                        code: trimmed.substring(0, 80),
+                        gateState: cf.gateState || '0',
+                        gateChecks: cf.gateChecks || [{ state: '0', reason: cf.desc }],
+                        suppressReason: cf.suppressReason || null
+                    };
+                    gateStateStats[f.gateState]++;
+                    if (f.gateState === '1') {
+                        f.severity = 'SUPPRESSED';
+                        suppressed.push(f);
+                        const reason = f.suppressReason || 'Context-safe (custom)';
+                        suppressionStats[reason] = (suppressionStats[reason] || 0) + 1;
+                    } else if (f.gateState === 'X') {
+                        f.severity = 'REVIEW';
+                        review.push(f);
+                    } else {
+                        findings.push(f);
+                    }
+                }
+            }
+
+            for (const [gateId, gate] of Object.entries(langGates)) {
+                // v5.0: Skip gates with empty patterns (handled by custom analysis)
+                if (!gate.patterns.length) continue;
+
+                for (const pattern of gate.patterns) {
+                    if (!line.includes(pattern)) continue;
+
+                    // v6.0: 4-state gate checks
+                    // Each check returns {state, reason}
+                    const checks = [];
+                    let severity = gate.severity;
+
+                    // Check 0: Language applicability (Z = wrong language)
+                    if (currentLang === 'c' && /\bdelete\b|\bnew\b/.test(pattern)) {
+                        checks.push(gateCheck('Z', 'C++ pattern in C mode'));
+                    }
+
+                    // Rule 1: Safe wrapper function
+                    if (usesSafeWrapper(line)) {
+                        checks.push(gateCheck('1', 'Uses safe wrapper function'));
+                    }
+
+                    // Rule 2: This IS a null/bounds check (not a dereference)
+                    if (gateId === 'NULL-001' || gateId === 'NULL-002') {
+                        if (/if\s*\([^)]*==\s*NULL|if\s*\([^)]*!=\s*NULL|if\s*\(\s*!\w+\s*\)/.test(line)) {
+                            checks.push(gateCheck('1', 'Line IS a null check (guard pattern)'));
+                        }
+                    }
+
+                    // Rule 3: Bounds check precedes array access
+                    if (gateId === 'BOF-002') {
+                        if (hasBoundsGuard(context)) {
+                            checks.push(gateCheck('1', 'Bounds check in context'));
+                        }
+                        if (/^\s*(static\s+)?(const\s+)?\w+\s+\w+\[/.test(trimmed)) {
+                            checks.push(gateCheck('1', 'Array declaration (not access)'));
+                        }
+                    }
+
+                    // Rule 4: Null check precedes dereference
+                    if (gateId === 'NULL-001' || gateId === 'NULL-002') {
+                        if (hasNullGuard(context)) {
+                            const preLines = lines.slice(Math.max(0, idx - 5), idx);
+                            const derefMatch = trimmed.match(/(\w+)\s*->/);
+                            const derefId = derefMatch ? derefMatch[1] : null;
+                            let deletedBefore = false;
+                            if (derefId) {
+                                for (const pl of preLines) {
+                                    if (new RegExp('delete\\s+' + derefId + '\\b').test(pl)) {
+                                        deletedBefore = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (deletedBefore) {
+                                checks.push(gateCheck('0', 'UAF masquerading as null-safe'));
+                            } else {
+                                checks.push(gateCheck('1', 'Null check in context'));
+                            }
+                        }
+                    }
+
+                    // Rule 5: Overflow protection in context
+                    if (gateId === 'INT-001' || gateId === 'INT-002') {
+                        if (hasOverflowGuard(context)) {
+                            checks.push(gateCheck('1', 'Overflow protection in context'));
+                        }
+                        if (/for\s*\([^;]+;\s*\w+\s*<\s*\w+/.test(context) && /\+\+|\-\-/.test(line)) {
+                            checks.push(gateCheck('1', 'Bounded loop counter'));
+                        }
+                    }
+
+                    // Rule 6: UAF/DF with identity-aware nullification
+                    if (gateId === 'UAF-001' || gateId === 'DF-001') {
+                        const uafResult = analyzeUafDf(line, context, gateId);
+                        if (uafResult) {
+                            checks.push(gateCheck('1', uafResult));
+                        }
+                    }
+
+                    // Rule 7: Rust-specific
+                    if (currentLang === 'rust') {
+                        if (gateId === 'UNWRAP-001' && /\.ok\(\)|\.err\(\)|if let|match\s+/.test(context)) {
+                            checks.push(gateCheck('1', 'Result/Option handled'));
+                        }
+                        if (gateId === 'UNSAFE-001' && /\/\/\s*SAFETY:/.test(context)) {
+                            checks.push(gateCheck('1', 'Safety comment documented'));
+                        }
+                    }
+
+                    // Rule 8: C++ smart pointers
+                    if (currentLang === 'cpp') {
+                        if ((gateId === 'RAW-001' || gateId === 'UAF-001') && 
+                            /unique_ptr|shared_ptr|make_unique|make_shared/.test(context)) {
+                            checks.push(gateCheck('1', 'Smart pointer management'));
+                        }
+                    }
+
+                    // Rule 9: void** aliasing — inconclusive (X)
+                    if ((gateId === 'UAF-001' || gateId === 'DF-001') && /void\s*\*\*/.test(context)) {
+                        if (!checks.some(c => c.state === '0')) {
+                            checks.push(gateCheck('X', 'void** aliasing: ownership inconclusive'));
+                        }
+                    }
+
+                    // v5.0: SELF-DEL-001 is NEVER suppressed — force 0
+                    if (gateId === 'SELF-DEL-001') {
+                        checks.length = 0;
+                        checks.push(gateCheck('0', 'delete self/this: always critical'));
+                    }
+
+                    // v6.0: Combine gate states
+                    const combined = combineGateStates(checks);
+                    const finalState = combined.state;
+                    gateStateStats[finalState]++;
+
+                    // Derive suppressReason from the dominant check
+                    const dominantCheck = combined.checks.find(c => c.state === finalState);
+                    const reason = dominantCheck ? dominantCheck.reason : null;
+
+                    const finding = {
+                        id: `${gateId}-${lineNum}`,
+                        gate: gateId,
+                        desc: gate.desc,
+                        cwe: gate.cwe,
+                        owasp: gate.owasp,
+                        nist: gate.nist,
+                        severity: finalState === '1' ? 'SUPPRESSED' : finalState === 'X' ? 'REVIEW' : severity,
+                        line: lineNum,
+                        code: trimmed.substring(0, 80),
+                        gateState: finalState,
+                        gateChecks: checks,
+                        suppressReason: finalState === '1' ? reason : null,
+                        reviewReason: finalState === 'X' ? reason : null
+                    };
+
+                    if (finalState === '1') {
+                        suppressed.push(finding);
+                        suppressionStats[reason] = (suppressionStats[reason] || 0) + 1;
+                    } else if (finalState === 'X') {
+                        review.push(finding);
+                    } else if (finalState === 'Z') {
+                        // Not applicable — don't emit
+                    } else {
+                        findings.push(finding);
+                    }
+                    break;
+                }
+            }
+        });
+
+        // Parse functions
+        const functions = parseFunctions(code, lines);
+
+        analysisResults = { findings, suppressed, review, secrets, functions, suppressionStats, gateStateStats };
+        updateUI();
+    }
+
+    function parseFunctions(code, lines) {
+        const functions = [];
+        
+        if (currentLang === 'c' || currentLang === 'cpp') {
+            const funcRegex = /^[\w\s\*:&<>]+\s+(\w+)\s*\([^)]*\)\s*(const\s*)?\{?$/;
+            let i = 0;
+            while (i < lines.length) {
+                const match = lines[i].match(funcRegex);
+                if (match && !lines[i].includes('if') && !lines[i].includes('while') && !lines[i].includes('for')) {
+                    const name = match[1];
+                    const start = i;
+                    let braceCount = 0, started = false, funcLines = [];
+                    while (i < lines.length) {
+                        funcLines.push(lines[i]);
+                        for (const ch of lines[i]) {
+                            if (ch === '{') { braceCount++; started = true; }
+                            if (ch === '}') braceCount--;
+                        }
+                        if (started && braceCount === 0) break;
+                        i++;
+                    }
+                    functions.push({ name, startLine: start + 1, endLine: i + 1, lines: funcLines });
+                }
+                i++;
+            }
+        } else if (currentLang === 'rust') {
+            const funcRegex = /^(\s*)(pub\s+)?(async\s+)?fn\s+(\w+)/;
+            let i = 0;
+            while (i < lines.length) {
+                const match = lines[i].match(funcRegex);
+                if (match) {
+                    const name = match[4];
+                    const start = i;
+                    let braceCount = 0, started = false, funcLines = [];
+                    while (i < lines.length) {
+                        funcLines.push(lines[i]);
+                        for (const ch of lines[i]) {
+                            if (ch === '{') { braceCount++; started = true; }
+                            if (ch === '}') braceCount--;
+                        }
+                        if (started && braceCount === 0) break;
+                        i++;
+                    }
+                    functions.push({ name, startLine: start + 1, endLine: i + 1, lines: funcLines });
+                }
+                i++;
+            }
+        } else if (currentLang === 'python') {
+            const funcRegex = /^def\s+(\w+)\s*\(/;
+            let i = 0;
+            while (i < lines.length) {
+                const match = lines[i].match(funcRegex);
+                if (match) {
+                    const name = match[1];
+                    const start = i;
+                    const indent = lines[i].search(/\S/);
+                    let funcLines = [lines[i]];
+                    i++;
+                    while (i < lines.length && (lines[i].trim() === '' || lines[i].search(/\S/) > indent)) {
+                        funcLines.push(lines[i]);
+                        i++;
+                    }
+                    functions.push({ name, startLine: start + 1, endLine: i, lines: funcLines });
+                    continue;
+                }
+                i++;
+            }
+        }
+        return functions;
+    }
+
+    // ================================================================
+    // UI UPDATES
+    // ================================================================
+    function updateUI() {
+        const { findings, suppressed, review, secrets, functions, suppressionStats, gateStateStats } = analysisResults;
+        
+        document.getElementById('nav-findings-count').textContent = findings.length;
+        document.getElementById('nav-review-count').textContent = review.length;
+        document.getElementById('nav-suppressed-count').textContent = suppressed.length;
+        document.getElementById('nav-secrets-count').textContent = secrets.length;
+
+        const critical = findings.filter(f => f.severity === 'CRITICAL').length;
+        const high = findings.filter(f => f.severity === 'HIGH').length;
+        const medium = findings.filter(f => f.severity === 'MEDIUM').length;
+        const low = findings.filter(f => f.severity === 'LOW').length;
+
+        document.getElementById('metric-critical').textContent = critical;
+        document.getElementById('metric-high').textContent = high;
+        document.getElementById('metric-medium').textContent = medium;
+        document.getElementById('metric-low').textContent = low;
+        document.getElementById('metric-review').textContent = review.length;
+        document.getElementById('metric-suppressed').textContent = suppressed.length;
+
+        // Adjusted risk score: review items count at half weight
+        const riskScore = Math.min(100, critical * 25 + high * 10 + medium * 3 + low + review.length * 5 + secrets.length * 15);
+        const riskCircle = document.getElementById('risk-circle');
+        const riskSubtitle = document.getElementById('risk-subtitle');
+        
+        riskCircle.textContent = riskScore;
+        riskCircle.className = 'risk-circle ' + (riskScore >= 75 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low');
+        const total = findings.length + review.length + suppressed.length || 1;
+        riskSubtitle.textContent = `${findings.length} active (0), ${review.length} review (X), ${suppressed.length} suppressed (1) | FP: ${Math.round(suppressed.length / total * 100)}%`;
+
+        // Suppression stats
+        document.getElementById('suppression-stats').innerHTML = Object.keys(suppressionStats).length ? 
+            Object.entries(suppressionStats).sort((a,b) => b[1] - a[1]).map(([rule, count]) => `
+                <div class="suppression-rule">
+                    <span>&#x1F507;</span>
+                    <code>${escapeHtml(rule)}</code>
+                    <span class="suppression-count">${count}</span>
+                </div>
+            `).join('') : '<div class="empty-state"><div class="empty-icon">&#x1F507;</div>No suppressions</div>';
+
+        // Category breakdown
+        const catCounts = {};
+        findings.forEach(f => {
+            const cat = f.gate.split('-')[0];
+            catCounts[cat] = (catCounts[cat] || 0) + 1;
+        });
+        // Include review in categories with (X) marker
+        review.forEach(f => {
+            const cat = f.gate.split('-')[0] + ' (X)';
+            catCounts[cat] = (catCounts[cat] || 0) + 1;
+        });
+        document.getElementById('category-breakdown').innerHTML = Object.keys(catCounts).length ?
+            Object.entries(catCounts).sort((a,b) => b[1] - a[1]).map(([cat, count]) => `
+                <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid var(--border);">
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">${cat}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent);">${count}</span>
+                </div>
+            `).join('') : '<div class="empty-state">No categories</div>';
+
+        renderFindings(findings);
+        renderReview(review);
+        renderSuppressed(suppressed);
+        generatePrompts();
+
+        // Secrets
+        document.getElementById('secrets-list').innerHTML = secrets.length ? secrets.map(s => `
+            <div class="secret-item">
+                <div class="secret-icon">&#x1F511;</div>
+                <div class="secret-info">
+                    <div class="secret-type">${s.type}</div>
+                    <div class="secret-location">Line ${s.line}</div>
+                </div>
+                <div class="secret-preview">${escapeHtml(s.preview)}</div>
+                <span class="finding-severity ${s.severity.toLowerCase()}">${s.severity}</span>
+            </div>
+        `).join('') : '<div class="empty-state"><div class="empty-icon">&#x1F510;</div>No secrets detected</div>';
+
+        // Functions
+        document.getElementById('func-count').textContent = `${functions.length} functions`;
+        document.getElementById('functions-panel').innerHTML = functions.length ? functions.map((f, idx) => {
+            const funcFindings = findings.filter(fd => fd.line >= f.startLine && fd.line <= f.endLine);
+            const funcReview = review.filter(fd => fd.line >= f.startLine && fd.line <= f.endLine);
+            const funcSuppressed = suppressed.filter(fd => fd.line >= f.startLine && fd.line <= f.endLine);
+            const hasCrit = funcFindings.some(fd => fd.severity === 'CRITICAL');
+            const hasHigh = funcFindings.some(fd => fd.severity === 'HIGH');
+            const hasReview = funcReview.length > 0;
+            
+            return `
+                <div class="func-block" data-idx="${idx}">
+                    <div class="func-header" onclick="toggleFunc(${idx})">
+                        <div class="func-name">${escapeHtml(f.name)}</div>
+                        <div class="func-badges">
+                            ${hasCrit ? '<span class="func-badge" style="background: var(--critical); color: white;">CRIT</span>' : ''}
+                            ${hasHigh && !hasCrit ? '<span class="func-badge" style="background: var(--error); color: white;">HIGH</span>' : ''}
+                            ${!hasCrit && !hasHigh && funcFindings.length ? '<span class="func-badge" style="background: var(--warning); color: black;">WARN</span>' : ''}
+                            ${hasReview ? '<span class="func-badge" style="background: var(--review); color: black;">' + funcReview.length + ' X</span>' : ''}
+                            ${!funcFindings.length && !hasReview ? '<span class="func-badge" style="background: var(--success); color: black;">OK</span>' : ''}
+                            ${funcSuppressed.length ? '<span class="func-badge" style="background: var(--text-muted); color: white;">' + funcSuppressed.length + '&#x1F507;</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="func-body">
+                        <div class="func-code">${f.lines.map((line, i) => {
+                            const lineNum = f.startLine + i;
+                            const hasFinding = funcFindings.some(fd => fd.line === lineNum);
+                            const hasReviewLine = funcReview.some(fd => fd.line === lineNum);
+                            const isSuppressed = funcSuppressed.some(fd => fd.line === lineNum);
+                            return `<div class="code-line ${hasFinding ? 'line-finding' : ''} ${hasReviewLine ? 'line-review' : ''} ${isSuppressed ? 'line-suppressed' : ''}"><span class="line-num">${lineNum}</span><span class="line-content">${escapeHtml(line)}</span></div>`;
+                        }).join('')}</div>
+                    </div>
+                </div>
+            `;
+        }).join('') : '<div class="empty-state"><div class="empty-icon">&#x1F4C1;</div>No functions</div>';
+    }
+
+    function renderFindings(findings, filter = 'all') {
+        const filtered = filter === 'all' ? findings : findings.filter(f => f.severity.toLowerCase() === filter);
+        document.getElementById('findings-list').innerHTML = filtered.length ? filtered.map(f => `
+            <div class="finding-item" onclick="this.classList.toggle('expanded')">
+                <div class="finding-header">
+                    <span class="finding-severity ${f.severity.toLowerCase()}">${f.severity}</span>
+                    <span class="finding-title">${f.desc}</span>
+                    <span class="finding-gate">${f.gate}</span>
+                    <span class="finding-meta">L${f.line}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--critical); margin-left: 0.25rem;">&#x25A0; 0</span>
+                </div>
+                <div class="finding-body">
+                    <div class="finding-code">${escapeHtml(f.code)}</div>
+                    <div class="finding-tags">
+                        <span class="tag cwe">${f.cwe}</span>
+                        <span class="tag owasp">OWASP ${f.owasp}</span>
+                        <span class="tag nist">NIST ${f.nist}</span>
+                    </div>
+                    ${f.gateChecks && f.gateChecks.length ? `
+                    <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-secondary);">
+                        <strong>Gate Checks:</strong>
+                        ${f.gateChecks.map(c => `<div style="margin-left: 0.5rem; margin-top: 0.15rem;">
+                            <span style="color: ${c.state === '0' ? 'var(--critical)' : c.state === '1' ? 'var(--success)' : c.state === 'X' ? 'var(--review)' : 'var(--text-muted)'};">[${c.state}]</span> ${escapeHtml(c.reason)}
+                        </div>`).join('')}
+                    </div>` : ''}
+                    <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-secondary);">
+                        <strong>Remediation:</strong> ${getRemediation(f.gate)}
+                    </div>
+                </div>
+            </div>
+        `).join('') : '<div class="empty-state"><div class="empty-icon">&#x2705;</div>No findings</div>';
+    }
+
+    function renderReview(review) {
+        document.getElementById('review-list').innerHTML = review.length ? review.map(f => `
+            <div class="finding-item" style="border-left: 2px solid var(--review);" onclick="this.classList.toggle('expanded')">
+                <div class="finding-header">
+                    <span class="finding-severity review">REVIEW</span>
+                    <span class="finding-title">${f.desc}</span>
+                    <span class="finding-gate">${f.gate}</span>
+                    <span class="finding-meta">L${f.line}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--review); margin-left: 0.25rem;">&#x25A0; X</span>
+                </div>
+                <div class="finding-body">
+                    <div class="finding-code">${escapeHtml(f.code)}</div>
+                    <div class="finding-tags">
+                        <span class="tag cwe">${f.cwe}</span>
+                        <span class="tag owasp">OWASP ${f.owasp}</span>
+                        <span class="tag nist">NIST ${f.nist}</span>
+                    </div>
+                    <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(245, 158, 11, 0.1); border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        <div style="font-size: 0.65rem; color: var(--review); font-weight: 600;">&#x2753; Needs Human Review</div>
+                        <div style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            ${f.reviewReason || 'Inconclusive analysis - some checks passed, others could not be determined'}
+                        </div>
+                    </div>
+                    ${f.gateChecks && f.gateChecks.length ? `
+                    <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-secondary);">
+                        <strong>Gate Checks:</strong>
+                        ${f.gateChecks.map(c => `<div style="margin-left: 0.5rem; margin-top: 0.15rem;">
+                            <span style="color: ${c.state === '0' ? 'var(--critical)' : c.state === '1' ? 'var(--success)' : c.state === 'X' ? 'var(--review)' : 'var(--text-muted)'};">[${c.state}]</span> ${escapeHtml(c.reason)}
+                        </div>`).join('')}
+                    </div>` : ''}
+                    <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-secondary);">
+                        <strong>Remediation:</strong> ${getRemediation(f.gate)}
+                    </div>
+                </div>
+            </div>
+        `).join('') : '<div class="empty-state"><div class="empty-icon">&#x2753;</div>No findings pending review</div>';
+    }
+
+    function renderSuppressed(suppressed) {
+        document.getElementById('suppressed-list').innerHTML = suppressed.length ? suppressed.map(f => `
+            <div class="finding-item suppressed" onclick="this.classList.toggle('expanded')">
+                <div class="finding-header">
+                    <span class="finding-severity suppressed">SUPPRESSED</span>
+                    <span class="finding-title">${f.desc}</span>
+                    <span class="finding-gate">${f.gate}</span>
+                    <span class="finding-meta">L${f.line}</span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: var(--success); margin-left: 0.25rem;">&#x25A0; 1</span>
+                    <span class="finding-reason">&#x2713; ${f.suppressReason}</span>
+                </div>
+                <div class="finding-body">
+                    <div class="finding-code">${escapeHtml(f.code)}</div>
+                    ${f.gateChecks && f.gateChecks.length ? `
+                    <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--text-secondary);">
+                        <strong>Gate Checks:</strong>
+                        ${f.gateChecks.map(c => `<div style="margin-left: 0.5rem; margin-top: 0.15rem;">
+                            <span style="color: ${c.state === '0' ? 'var(--critical)' : c.state === '1' ? 'var(--success)' : c.state === 'X' ? 'var(--review)' : 'var(--text-muted)'};">[${c.state}]</span> ${escapeHtml(c.reason)}
+                        </div>`).join('')}
+                    </div>` : ''}
+                    <div style="margin-top: 0.5rem; font-size: 0.65rem; color: var(--success);">
+                        <strong>Suppression Reason:</strong> ${f.suppressReason}
+                    </div>
+                </div>
+            </div>
+        `).join('') : '<div class="empty-state"><div class="empty-icon">&#x1F507;</div>No suppressed findings</div>';
+    }
+
+    function filterFindings(severity) {
+        document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        renderFindings(analysisResults.findings, severity);
+    }
+
+    function getRemediation(gate) {
+        const rems = {
+            'UAF-001': 'Set pointer to NULL after free, use RAII/smart pointers',
+            'DF-001': 'Check pointer before free, use ownership semantics',
+            'SELF-DEL-001': 'Use deferred destruction (event queue orRef/Release). Never delete self/this inside dispatch callback - re-entrancy causes UAF on caller stack frames',
+            'BOF-002': 'Add bounds check: if (idx < len) before access',
+            'NULL-001': 'Check pointer != NULL before dereference',
+            'NULL-002': 'Always check malloc/calloc return value',
+            'INT-001': 'Use __builtin_mul_overflow or checked arithmetic',
+            'INT-002': 'Use saturating/checked arithmetic, validate bounds',
+            'RAW-001': 'Use std::make_unique/make_shared instead of raw new',
+            'CAST-001': 'Use static_cast/dynamic_cast instead of C-style cast',
+            'CAST-002': 'Add RTTI check or magic-number validation before casting void* to concrete type. Prefer typed handles or std::variant over void* dispatch',
+            'VALIDATE-001': 'Add null check on raw C-string parameter before use. For IPC/plugin boundaries, also validate string length',
+            'DIM-001': 'Use __builtin_mul_overflow() for dimension multiplication or validate against maximum before buffer allocation',
+            'UNSAFE-001': 'Document SAFETY comment, minimize unsafe scope',
+            'UNWRAP-001': 'Use ? operator, if let, or match instead',
+            'TRANSMUTE-001': 'Use safe conversions like From/Into traits',
+            'INJ-001': 'Use ast.literal_eval() instead of eval()',
+            'INJ-003': 'Use parameterized queries with placeholders',
+            'DESER-001': 'Use yaml.safe_load(), avoid pickle with untrusted data'
+        };
+        return rems[gate] || 'Review and apply security best practices';
+    }
+
+    // ================================================================
+    // NAVIGATION & UTILITIES
+    // ================================================================
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('view-' + viewId).classList.add('active');
+        event?.target?.closest('.nav-item')?.classList.add('active');
+        const titles = { dashboard: 'Dashboard', scan: 'Scan Code', findings: 'Findings', review: 'Review (Needs Human Eyes)', suppressed: 'Suppressed', secrets: 'Secrets', exclisp: 'ExCLisp Composer', prompts: 'AI Prompts', rules: 'Suppression Rules', reference: 'Reference' };
+        document.getElementById('view-title').textContent = titles[viewId] || viewId;
+    }
+
+    function setLang(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.lang-btn[data-lang="${lang}"]`).classList.add('active');
+        const labels = { c: 'C Source', cpp: 'C++ Source', rust: 'Rust Source', python: 'Python', terraform: 'Terraform', kubernetes: 'Kubernetes', docker: 'Dockerfile' };
+        const placeholders = { c: '// C code', cpp: '// C++ code', rust: '// Rust code', python: '# Python', terraform: '# Terraform', kubernetes: '# K8s YAML', docker: '# Dockerfile' };
+        document.getElementById('scan-lang-label').textContent = labels[lang];
+        document.getElementById('code-input').placeholder = placeholders[lang];
+    }
+
+    function toggleFunc(idx) { document.querySelector(`.func-block[data-idx="${idx}"]`).classList.toggle('expanded'); }
+    function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+    async function pasteCode() { try { document.getElementById('code-input').value = await navigator.clipboard.readText(); } catch(e) { alert('Paste manually'); } }
+
+    // ================================================================
+    // v6.0: ExCLisp Composer + AI Prompt Generator
+    // Grammar: {AUTH}::DOMAIN(OP)[MECH]
+    // ================================================================
+    let selectedGateState = '0';
+
+    function setGateState(state) {
+        selectedGateState = state;
+        document.querySelectorAll('.gate-state-btn').forEach(b => {
+            b.style.borderColor = b.dataset.state === state ? 
+                (state === '0' ? 'var(--critical)' : state === '1' ? 'var(--success)' : state === 'X' ? 'var(--review)' : 'var(--text-muted)') 
+                : 'var(--border)';
+            b.style.fontWeight = b.dataset.state === state ? '700' : '400';
+        });
+    }
+
+    function toggleNist(el) {
+        el.classList.toggle('active');
+    }
+
+    function insertSym(sym) {
+        const ctx = document.getElementById('exc-context');
+        const start = ctx.selectionStart;
+        const end = ctx.selectionEnd;
+        ctx.value = ctx.value.substring(0, start) + sym + ctx.value.substring(end);
+        ctx.selectionStart = ctx.selectionEnd = start + sym.length;
+        ctx.focus();
+    }
+
+    function composeExclisp() {
+        const auth = document.getElementById('exc-auth').value;
+        const domain = document.getElementById('exc-domain').value;
+        const op = document.getElementById('exc-op').value;
+        const gate = document.getElementById('exc-gate').value;
+        const ctx = document.getElementById('exc-context').value.trim();
+
+        // Collect active NIST controls
+        const nistCtrls = [];
+        document.querySelectorAll('.nist-toggle.active').forEach(el => {
+            nistCtrls.push(el.dataset.nist);
+        });
+
+        // Build mechanism string
+        let mech = gate;
+        if (nistCtrls.length) {
+            mech += '; NIST ' + nistCtrls.join(', ');
+        }
+        if (selectedGateState !== '0') {
+            mech += '; 0D=' + selectedGateState;
+        }
+        if (ctx) {
+            mech += '; ' + ctx;
+        }
+
+        const cmd = '{' + auth + '}::' + domain + '(' + op + ')[' + mech + ']';
+        document.getElementById('exc-output').textContent = cmd;
+    }
+
+    function copyExclisp() {
+        const text = document.getElementById('exc-output').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            const el = document.getElementById('exc-output');
+            el.style.borderColor = 'var(--success)';
+            setTimeout(() => el.style.borderColor = '', 800);
+        });
+    }
+
+    function quickCmd(cmd) {
+        document.getElementById('exc-output').textContent = cmd;
+    }
+
+    // ================================================================
+    // AI Prompt Generator: findings -> ExCLisp commands
+    // ================================================================
+    function generatePrompts() {
+        const { findings, review } = analysisResults;
+        const all = [...findings, ...review];
+        if (!all.length) {
+            document.getElementById('prompts-list').innerHTML = 
+                '<div class="empty-state"><div class="empty-icon">&#x1F916;</div>No findings to generate prompts from</div>';
+            return;
+        }
+
+        // Map gate prefix to domain
+        const domainMap = {
+            'UAF': 'memory', 'DF': 'memory', 'RAW': 'memory',
+            'BOF': 'bounds', 'NULL': 'bounds',
+            'INT': 'bounds', 'DIM': 'bounds',
+            'CAST': 'code', 'VALIDATE': 'code', 'SELF-DEL': 'memory',
+            'INJ': 'injection', 'DESER': 'injection', 'PATH': 'injection',
+            'CRYPT': 'crypto', 'SSRF': 'injection', 'XXE': 'injection',
+            'UNSAFE': 'security', 'UNWRAP': 'code'
+        };
+
+        const prompts = all.map(f => {
+            const prefix = f.gate.replace(/-\d+$/, '');
+            const domain = domainMap[prefix] || 'security';
+            const stateTag = f.gateState === 'X' ? '; 0D=X' : '';
+            const nist = f.nist || 'SI-16';
+
+            const cmd = '{AI}::' + domain + '(FIX)[' + f.gate + '; NIST ' + nist + stateTag + ']';
+            const severity = f.gateState === 'X' ? 'REVIEW' : f.severity;
+
+            return {
+                cmd,
+                gate: f.gate,
+                desc: f.desc,
+                line: f.line,
+                cwe: f.cwe,
+                severity,
+                gateState: f.gateState,
+                checks: f.gateChecks || []
+            };
+        });
+
+        document.getElementById('prompts-list').innerHTML = prompts.map(p => `
+            <div class="prompt-item" onclick="copyPrompt(this)">
+                <div>${escapeHtml(p.cmd)}</div>
+                <div class="prompt-meta">
+                    <span class="finding-severity ${p.severity.toLowerCase()}" style="font-size: 0.5rem; padding: 0.1rem 0.3rem;">${p.severity}</span>
+                    L${p.line}: ${escapeHtml(p.desc)} (${p.cwe})
+                    ${p.checks.length ? '<br>Gate: ' + p.checks.map(c => '[' + c.state + '] ' + escapeHtml(c.reason)).join(' | ') : ''}
+                </div>
+            </div>
+        `).join('') + `
+            <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 4px;">
+                <div style="font-size: 0.6rem; color: var(--text-muted); margin-bottom: 0.3rem;"><strong>Full Audit Command</strong></div>
+                <div class="prompt-item" onclick="copyPrompt(this)" style="margin-bottom: 0;">
+                    {AI}::security(ANALYZE)[*; NIST *; 0D(Z X 0 1)]
+                </div>
+            </div>
+        `;
+    }
+
+    function copyPrompt(el) {
+        const text = el.childNodes[0].textContent || el.textContent;
+        navigator.clipboard.writeText(text.trim());
+        el.style.borderColor = 'var(--success)';
+        setTimeout(() => el.style.borderColor = '', 800);
+    }
+
+    function copyAllPrompts() {
+        const items = document.querySelectorAll('#prompts-list .prompt-item');
+        const text = Array.from(items).map(p => (p.childNodes[0].textContent || p.textContent).trim()).join('\n');
+        navigator.clipboard.writeText(text);
+        event.target.textContent = 'COPIED!';
+        setTimeout(() => event.target.textContent = 'Copy All', 1200);
+    }
+    function clearCode() { document.getElementById('code-input').value = ''; }
+
+    function exportSARIF() {
+        const allResults = [
+            ...analysisResults.findings.map(f => ({ ...f, sarifLevel: f.severity === 'CRITICAL' || f.severity === 'HIGH' ? 'error' : 'warning' })),
+            ...analysisResults.review.map(f => ({ ...f, sarifLevel: 'note' }))
+        ];
+        const sarif = {
+            "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+            "version": "2.1.0",
+            "runs": [{
+                "tool": { "driver": { "name": "Euman Security Scanner", "version": "6.0", "informationUri": "https://github.com/opsec-ee/euman-scanner",
+                    "properties": { "gateModel": "4-state (Z/X/0/1)", "gateStates": analysisResults.gateStateStats } } },
+                "results": allResults.map(f => ({
+                    "ruleId": f.gate,
+                    "level": f.sarifLevel,
+                    "message": { "text": f.desc },
+                    "locations": [{ "physicalLocation": { "region": { "startLine": f.line } } }],
+                    "properties": {
+                        "gateState": f.gateState || '0',
+                        "gateChecks": (f.gateChecks || []).map(c => `[${c.state}] ${c.reason}`)
+                    }
+                }))
+            }]
+        };
+        download('euman-scan.sarif', JSON.stringify(sarif, null, 2));
+    }
+
+    function exportJSON() {
+        download('euman-scan.json', JSON.stringify(analysisResults, null, 2));
+    }
+
+    function download(filename, content) {
+        const blob = new Blob([content], { type: 'application/json' });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+    }
+
+    // Initialize reference and rules
+    // ================================================================
+    // v6.0: Engine self-test
+    // Validates 4-state gate logic and critical gate detection.
+    // ================================================================
+    function selfTestEngine() {
+        const version = 'v6.0';
+        const errors = [];
+
+        // 1. Verify gate definitions
+        const cppGates = gates.cpp || {};
+        const requiredGates = [
+            'UAF-001', 'DF-001', 'SELF-DEL-001',
+            'CAST-001', 'CAST-002', 'VALIDATE-001',
+            'DIM-001', 'NULL-001', 'BOF-002', 'RAW-001'
+        ];
+        const missing = requiredGates.filter(g => !cppGates[g]);
+        if (missing.length) {
+            errors.push('Missing C++ gates: ' + missing.join(', '));
+        }
+
+        // 2. Run micro-scan: known-vulnerable C++ code
+        const testCode = [
+            'class Foo {',
+            'public:',
+            '    virtual void handle(const char *msg) {}',
+            '};',
+            'void callback(const char *msg, void **ud) {',
+            '    Foo *self = (Foo*)*ud;',
+            '    if (self != NULL) {',
+            '        self->handle(msg);',
+            '        if (self->done) {',
+            '            delete self;',
+            '            *ud = NULL;',
+            '        }',
+            '    }',
+            '}'
+        ].join('\n');
+
+        // Save state
+        const savedLang = currentLang;
+        const savedResults = analysisResults;
+        const savedInput = document.getElementById('code-input').value;
+
+        // Inject test code and run scan
+        const inputEl = document.getElementById('code-input');
+        inputEl.value = testCode;
+        currentLang = 'cpp';
+
+        try {
+            analyze();
+        } catch(e) {
+            errors.push('analyze() threw: ' + e.message);
+        }
+
+        // Collect gates from all 3 buckets (active, review, suppressed)
+        const gatesFound = {};
+        const gatesInReview = {};
+        analysisResults.findings.forEach(f => { gatesFound[f.gate] = true; });
+        analysisResults.review.forEach(f => { gatesInReview[f.gate] = true; gatesFound[f.gate] = true; });
+
+        // 3. Verify expected gates fired (in findings or review)
+        const expected = ['SELF-DEL-001', 'UAF-001', 'DF-001',
+                          'VALIDATE-001', 'CAST-001', 'CAST-002'];
+        const scanMissing = expected.filter(g => !gatesFound[g]);
+        if (scanMissing.length) {
+            errors.push('Scan missed gates: ' + scanMissing.join(', ') +
+                ' (found: ' + Object.keys(gatesFound).join(', ') + ')');
+        }
+
+        // 4. Verify 4-state infrastructure
+        if (!analysisResults.gateStateStats) {
+            errors.push('Missing gateStateStats');
+        }
+        if (!analysisResults.review) {
+            errors.push('Missing review array');
+        }
+
+        // 5. Verify SELF-DEL-001 is ALWAYS state 0 (never X or 1)
+        const selfDelFindings = analysisResults.findings.filter(f => f.gate === 'SELF-DEL-001');
+        const selfDelReview = analysisResults.review.filter(f => f.gate === 'SELF-DEL-001');
+        if (selfDelReview.length > 0) {
+            errors.push('SELF-DEL-001 in review (should always be 0/active)');
+        }
+        if (selfDelFindings.length > 0 && selfDelFindings[0].gateState !== '0') {
+            errors.push('SELF-DEL-001 gateState is ' + selfDelFindings[0].gateState + ' (expected 0)');
+        }
+
+        // 6. Verify VALIDATE-001 does NOT fire on declarations
+        inputEl.value = 'virtual void foo(const char *msg) = 0;';
+        currentLang = 'cpp';
+        try {
+            analyze();
+            if (analysisResults.findings.some(f => f.gate === 'VALIDATE-001') ||
+                analysisResults.review.some(f => f.gate === 'VALIDATE-001')) {
+                errors.push('VALIDATE-001 false positive on pure virtual declaration');
+            }
+        } catch(e) {
+            errors.push('Declaration test threw: ' + e.message);
+        }
+
+        // Restore state
+        inputEl.value = savedInput;
+        currentLang = savedLang;
+        analysisResults = savedResults;
+
+        // Report
+        const cppGateCount = Object.keys(cppGates).length;
+        if (errors.length === 0) {
+            console.log(
+                '%c[Scanner ' + version + '] Self-test PASSED | 4-state gate logic | ' +
+                cppGateCount + ' C++ gates | ' +
+                'Detected: ' + expected.join(', '),
+                'color: #22c55e; font-weight: bold'
+            );
+        } else {
+            console.error('[Scanner ' + version + '] Self-test FAILED:');
+            errors.forEach(e => console.error('  - ' + e));
+        }
+
+        // Sidebar badge
+        try {
+            const versionEl = document.querySelector('.sidebar-title span');
+            if (versionEl) {
+                versionEl.textContent = 'Scanner ' + version +
+                    (errors.length === 0 ? ' \u2705' : ' \u274C(' + errors.length + ')');
+            }
+        } catch(e) {}
+
+        return errors;
+    }
+
+    function initUI() {
+        // v6.0: Engine self-test on load
+        selfTestEngine();
+
+        // Rules view
+        document.getElementById('fp-rules').innerHTML = `
+            <div style="font-size: 0.7rem; margin-bottom: 0.5rem;"><strong>Skip Patterns</strong> (lines ignored entirely)</div>
+            ${suppressionRules.skipPatterns.slice(0, 10).map(p => `<code style="display: block; font-size: 0.6rem; color: var(--text-muted); margin: 0.2rem 0;">${escapeHtml(p.source)}</code>`).join('')}
+            <div style="font-size: 0.7rem; margin: 0.75rem 0 0.5rem 0;"><strong>Guard Patterns</strong> (suppress if found in context)</div>
+            ${suppressionRules.guardPatterns.nullGuard.slice(0, 4).map(p => `<code style="display: block; font-size: 0.6rem; color: var(--info); margin: 0.2rem 0;">${escapeHtml(p.source)}</code>`).join('')}
+            ${suppressionRules.guardPatterns.boundsGuard.slice(0, 4).map(p => `<code style="display: block; font-size: 0.6rem; color: var(--success); margin: 0.2rem 0;">${escapeHtml(p.source)}</code>`).join('')}
+        `;
+
+        document.getElementById('safe-wrappers').innerHTML = Object.entries(suppressionRules.safeWrappers).map(([lang, wrappers]) => `
+            <div style="margin-bottom: 0.75rem;">
+                <div style="font-size: 0.7rem; font-weight: 600; color: var(--accent); margin-bottom: 0.3rem;">${lang.toUpperCase()}</div>
+                ${wrappers.map(w => `<code style="display: inline-block; font-size: 0.6rem; background: var(--bg-tertiary); padding: 0.1rem 0.3rem; margin: 0.1rem; border-radius: 3px;">${w}</code>`).join('')}
+            </div>
+        `).join('');
+
+        // Reference view
+        const renderGates = (g) => Object.entries(g).map(([id, gate]) => `
+            <div style="padding: 0.4rem; border-bottom: 1px solid var(--border);">
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent);">${id}</div>
+                <div style="font-size: 0.65rem; color: var(--text-secondary);">${gate.desc} (${gate.cwe})</div>
+            </div>
+        `).join('');
+
+        document.getElementById('c-gates-ref').innerHTML = renderGates({...gates.c, ...gates.cpp});
+        document.getElementById('rust-gates-ref').innerHTML = renderGates(gates.rust);
+        document.getElementById('py-gates-ref').innerHTML = renderGates({...gates.python, ...gates.terraform, ...gates.kubernetes, ...gates.docker});
+    }
+
+    document.addEventListener('DOMContentLoaded', initUI);
+    </script>
+</body>
+</html>
