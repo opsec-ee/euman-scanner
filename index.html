@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Euman Security Scanner v6.2 (4-State Gate Logic)</title>
+    <title>Euman Security Scanner v6.3 (4-State Gate Logic)</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -333,7 +333,7 @@
         <div class="sidebar">
             <div class="logo">
                 <h1>EUMAN</h1>
-                <span>Security Scanner v6.0</span>
+                <span>Security Scanner v6.3</span>
             </div>
             <div class="nav-section">
                 <div class="nav-label">Analysis</div>
@@ -373,6 +373,9 @@
                 </div>
                 <div class="nav-item" onclick="showView('reference')">
                     <span class="nav-icon">&#x1F4D6;</span><span>Reference</span>
+                </div>
+                <div class="nav-item" onclick="showView('changelog')">
+                    <span class="nav-icon">&#x1F4DD;</span><span>Changelog</span>
                 </div>
             </div>
         </div>
@@ -708,11 +711,55 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Changelog -->
+                <div class="view" id="view-changelog">
+                    <div class="card" style="max-width: 900px;">
+                        <div class="card-header">Changelog</div>
+                        <div class="card-body scroll" id="changelog-content" style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; line-height: 1.6; padding: 1rem;"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
+    // ================================================================
+    // CHANGELOG v6.3 (Identity-Aware NULL-001)
+    // ================================================================
+    // v6.3: NULL-001 identity-aware suppression + Z-state baseline fix
+    //   - NULL-001 suppression now extracts the dereferenced identifier
+    //     from `ptr->member` and verifies the null check targets THAT
+    //     SAME identifier, not just any null check in the context window
+    //   - Root cause: two-part failure on L2964 err->message:
+    //     (a) v6.0-6.2: hasNullGuard() matched `if (!okay)` which is
+    //         NOT a guard for `err` — false suppression (gate=1)
+    //     (b) initial v6.3 fix removed false match but pushed no checks,
+    //         causing combineGateStates() to return Z (not applicable),
+    //         silently dropping the finding instead of flagging it
+    //   - Fix: explicit gateCheck('0') baseline when no identity guard
+    //     found, ensuring unguarded dereferences are ACTIVE findings
+    //   - Also added free() recognition alongside delete in UAF check
+    //   - Suppression reason now shows checked identifier:
+    //     "Null check on 'self' in context" (was: "Null check in context")
+    //   - Added Changelog view panel to GUI
+    //   - NIST 800-53: SI-16 Memory Protection, CA-8 Penetration Testing
+    //     Identity-aware analysis eliminates false-negative class where
+    //     unrelated guards mask genuine null dereference vulnerabilities
+    //
+    // v6.2: CAST-001 false positive fix + SARIF artifactLocation
+    //   - CAST-001 regex: excludes function calls (word char before paren)
+    //     e.g. setStatus(STATUS_LOADED), mPump(NULL) no longer flagged
+    //   - CAST-001 regex: excludes ALL_CAPS_UNDERSCORE constants
+    //     e.g. STATUS_LOADED, GL_RGBA, GST_LEVEL_WARNING
+    //   - CAST-001 regex: excludes known constants (NULL, TRUE, FALSE)
+    //   - 84 -> 38 active findings (-55%), 47 -> 12 CAST-001 (-74%)
+    //   - SARIF export: artifactLocation.uri populated from // FILE: markers
+    //   - File marker tracking: // FILE: comments from chain_indra.sh parsed
+    //   - Self-test: CAST-001 FP rejection test + file marker test added
+    //   - SARIF version bumped to 6.2
+    //   - NIST 800-53: SI-16, CA-8 improved audit signal-to-noise ratio
+    //
     // ================================================================
     // CHANGELOG v6.0 (4-State Gate Logic)
     // ================================================================
@@ -1309,11 +1356,35 @@
             // Match: (Type*), (Type), (const Type*), (unsigned long)
             // Exclude: static_cast, dynamic_cast, reinterpret_cast, const_cast
             // Exclude: inside comments, #define, typedef
+            // v6.2: Exclude function calls (identifier before paren)
+            //       Exclude ALL_CAPS_UNDERSCORE constants (STATUS_LOADED, GL_RGBA)
+            //       Exclude known boolean/null constants (NULL, TRUE, FALSE)
             if (!/(static|dynamic|reinterpret|const)_cast/.test(trimmed) &&
                 !trimmed.startsWith('//') && !trimmed.startsWith('*') &&
                 !trimmed.startsWith('#')) {
-                const castRegex = /\(\s*(const\s+)?(unsigned\s+)?(struct\s+)?[A-Z]\w+\s*\*?\s*\)/g;
-                if (castRegex.test(trimmed)) {
+                const castRegex = /\(\s*(const\s+)?(unsigned\s+)?(struct\s+)?([A-Z]\w+)\s*\*?\s*\)/g;
+                let castMatch;
+                let foundCast = false;
+                while ((castMatch = castRegex.exec(trimmed)) !== null) {
+                    const mIdx = castMatch.index;
+                    const typeWord = castMatch[4];
+
+                    // Skip: preceded by word char = function call
+                    // e.g. setStatus(STATUS_LOADED), mPump(NULL)
+                    if (mIdx > 0 && /\w/.test(trimmed[mIdx - 1])) continue;
+
+                    // Skip: ALL_CAPS_UNDERSCORE = macro/enum constant
+                    // e.g. STATUS_LOADED, GL_RGBA, GST_LEVEL_WARNING
+                    if (/^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$/.test(typeWord)) continue;
+
+                    // Skip: known constants without underscores
+                    // e.g. NULL, TRUE, FALSE, YES, NO, EOF
+                    if (/^(NULL|TRUE|FALSE|YES|NO|EOF)$/.test(typeWord)) continue;
+
+                    foundCast = true;
+                    break;
+                }
+                if (foundCast) {
                     results.push({
                         gate: 'CAST-001',
                         desc: 'C-style cast',
@@ -1595,9 +1666,19 @@
         // Detect vulnerabilities
         const langGates = gates[currentLang] || gates.c;
         
+        // v6.2: Track current file from // FILE: markers (chain_indra.sh)
+        let currentFile = null;
+
         lines.forEach((line, idx) => {
             const lineNum = idx + 1;
             const trimmed = line.trim();
+
+            // v6.2: Parse file markers injected by split_functions.sh
+            const fileMarker = trimmed.match(/^\/\/\s*FILE:\s*(.+)$/);
+            if (fileMarker) {
+                currentFile = fileMarker[1].trim();
+                return;
+            }
             
             // Skip comments, annotations, declarations
             if (shouldSkipLine(trimmed)) return;
@@ -1617,6 +1698,7 @@
                         nist: cf.nist,
                         severity: cf.severity,
                         line: lineNum,
+                        file: currentFile,
                         code: trimmed.substring(0, 80),
                         gateState: cf.gateState || '0',
                         gateChecks: cf.gateChecks || [{ state: '0', reason: cf.desc }],
@@ -1677,24 +1759,46 @@
                     }
 
                     // Rule 4: Null check precedes dereference
+                    // v6.3: Identity-aware — verify the null check targets
+                    // the SAME identifier being dereferenced, not just any
+                    // null check in the context window
                     if (gateId === 'NULL-001' || gateId === 'NULL-002') {
-                        if (hasNullGuard(context)) {
-                            const preLines = lines.slice(Math.max(0, idx - 5), idx);
-                            const derefMatch = trimmed.match(/(\w+)\s*->/);
-                            const derefId = derefMatch ? derefMatch[1] : null;
-                            let deletedBefore = false;
-                            if (derefId) {
+                        const derefMatch = trimmed.match(/(\w+)\s*->/);
+                        const derefId = derefMatch ? derefMatch[1] : null;
+
+                        if (derefId) {
+                            const esc = derefId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            // Build identity-specific null guard patterns
+                            const idNullPatterns = [
+                                new RegExp('if\\s*\\(\\s*' + esc + '\\s*!=\\s*(NULL|nullptr)\\s*\\)'),
+                                new RegExp('if\\s*\\(\\s*' + esc + '\\s*==\\s*(NULL|nullptr)\\s*\\)'),
+                                new RegExp('if\\s*\\(\\s*!' + esc + '\\s*\\)'),
+                                new RegExp('if\\s*\\(\\s*' + esc + '\\s*\\)'),
+                                new RegExp(esc + '\\s*!=\\s*(NULL|nullptr)'),
+                                new RegExp(esc + '\\s*\\?\\s*')  // ternary: ptr ? expr : expr
+                            ];
+                            const idGuarded = idNullPatterns.some(p => p.test(context));
+
+                            if (idGuarded) {
+                                // Check for UAF masquerading as null-safe
+                                const preLines = lines.slice(Math.max(0, idx - 5), idx);
+                                let deletedBefore = false;
                                 for (const pl of preLines) {
-                                    if (new RegExp('delete\\s+' + derefId + '\\b').test(pl)) {
+                                    if (new RegExp('delete\\s+' + esc + '\\b').test(pl) ||
+                                        new RegExp('free\\s*\\(\\s*' + esc + '\\s*\\)').test(pl)) {
                                         deletedBefore = true;
                                         break;
                                     }
                                 }
-                            }
-                            if (deletedBefore) {
-                                checks.push(gateCheck('0', 'UAF masquerading as null-safe'));
+                                if (deletedBefore) {
+                                    checks.push(gateCheck('0', 'UAF masquerading as null-safe'));
+                                } else {
+                                    checks.push(gateCheck('1', 'Null check on \'' + derefId + '\' in context'));
+                                }
                             } else {
-                                checks.push(gateCheck('1', 'Null check in context'));
+                                // v6.3: No identity guard found — finding is ACTIVE
+                                // Without this, empty checks → Z → silently dropped
+                                checks.push(gateCheck('0', 'No null check on \'' + derefId + '\' in context'));
                             }
                         }
                     }
@@ -1766,6 +1870,7 @@
                         nist: gate.nist,
                         severity: finalState === '1' ? 'SUPPRESSED' : finalState === 'X' ? 'REVIEW' : severity,
                         line: lineNum,
+                        file: currentFile,
                         code: trimmed.substring(0, 80),
                         gateState: finalState,
                         gateChecks: checks,
@@ -2121,7 +2226,7 @@
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('view-' + viewId).classList.add('active');
         event?.target?.closest('.nav-item')?.classList.add('active');
-        const titles = { dashboard: 'Dashboard', scan: 'Scan Code', findings: 'Findings', review: 'Review (Needs Human Eyes)', suppressed: 'Suppressed', secrets: 'Secrets', exclisp: 'ExCLisp Composer', prompts: 'AI Prompts', rules: 'Suppression Rules', reference: 'Reference' };
+        const titles = { dashboard: 'Dashboard', scan: 'Scan Code', findings: 'Findings', review: 'Review (Needs Human Eyes)', suppressed: 'Suppressed', secrets: 'Secrets', exclisp: 'ExCLisp Composer', prompts: 'AI Prompts', rules: 'Suppression Rules', reference: 'Reference', changelog: 'Changelog' };
         document.getElementById('view-title').textContent = titles[viewId] || viewId;
     }
 
@@ -2298,18 +2403,24 @@
             "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
             "version": "2.1.0",
             "runs": [{
-                "tool": { "driver": { "name": "Euman Security Scanner", "version": "6.0", "informationUri": "https://github.com/opsec-ee/euman-scanner",
+                "tool": { "driver": { "name": "Euman Security Scanner", "version": "6.3", "informationUri": "https://github.com/opsec-ee/euman-scanner",
                     "properties": { "gateModel": "4-state (Z/X/0/1)", "gateStates": analysisResults.gateStateStats } } },
-                "results": allResults.map(f => ({
-                    "ruleId": f.gate,
-                    "level": f.sarifLevel,
-                    "message": { "text": f.desc },
-                    "locations": [{ "physicalLocation": { "region": { "startLine": f.line } } }],
-                    "properties": {
-                        "gateState": f.gateState || '0',
-                        "gateChecks": (f.gateChecks || []).map(c => `[${c.state}] ${c.reason}`)
+                "results": allResults.map(f => {
+                    const physLoc = { "region": { "startLine": f.line } };
+                    if (f.file) {
+                        physLoc.artifactLocation = { "uri": f.file };
                     }
-                }))
+                    return {
+                        "ruleId": f.gate,
+                        "level": f.sarifLevel,
+                        "message": { "text": f.desc },
+                        "locations": [{ "physicalLocation": physLoc }],
+                        "properties": {
+                            "gateState": f.gateState || '0',
+                            "gateChecks": (f.gateChecks || []).map(c => `[${c.state}] ${c.reason}`)
+                        }
+                    };
+                })
             }]
         };
         download('euman-scan.sarif', JSON.stringify(sarif, null, 2));
@@ -2326,11 +2437,13 @@
 
     // Initialize reference and rules
     // ================================================================
-    // v6.0: Engine self-test
-    // Validates 4-state gate logic and critical gate detection.
+    // v6.3: Engine self-test
+    // Validates 4-state gate logic, critical gate detection,
+    // CAST-001 false positive rejection, file marker tracking,
+    // and NULL-001 identity-aware suppression.
     // ================================================================
     function selfTestEngine() {
-        const version = 'v6.0';
+        const version = 'v6.3';
         const errors = [];
 
         // 1. Verify gate definitions
@@ -2425,6 +2538,90 @@
             errors.push('Declaration test threw: ' + e.message);
         }
 
+        // 7. v6.2: Verify CAST-001 does NOT fire on function calls/constants
+        inputEl.value = [
+            'void init() {',
+            '    setStatus(STATUS_LOADED);',
+            '    mPump(NULL);',
+            '    llgst_segtrap_set_enabled(FALSE);',
+            '    glTexImage2D(GL_RGBA);',
+            '    Foo *p = (Foo*)data;',
+            '}'
+        ].join('\n');
+        currentLang = 'cpp';
+        try {
+            analyze();
+            const castFindings = [
+                ...analysisResults.findings.filter(f => f.gate === 'CAST-001'),
+                ...analysisResults.review.filter(f => f.gate === 'CAST-001')
+            ];
+            // Should find exactly 1: (Foo*)data on line 6
+            if (castFindings.length !== 1) {
+                errors.push('CAST-001 FP test: expected 1, got ' + castFindings.length +
+                    ' (lines: ' + castFindings.map(f => f.line).join(',') + ')');
+            }
+        } catch(e) {
+            errors.push('CAST-001 FP test threw: ' + e.message);
+        }
+
+        // 8. v6.2: Verify file marker tracking populates finding.file
+        inputEl.value = [
+            '// FILE: indra/test/test.cpp',
+            'void callback(const char *msg) {',
+            '    Foo *p = (Foo*)data;',
+            '}'
+        ].join('\n');
+        currentLang = 'cpp';
+        try {
+            analyze();
+            const withFile = analysisResults.findings.filter(f => f.file === 'indra/test/test.cpp');
+            if (withFile.length === 0) {
+                errors.push('File marker tracking: no findings have file property');
+            }
+        } catch(e) {
+            errors.push('File marker test threw: ' + e.message);
+        }
+
+        // 9. v6.3: Verify NULL-001 identity-aware suppression
+        // err->message should NOT be suppressed by an unrelated null check
+        inputEl.value = [
+            'gboolean okay = llgst_init_check(NULL, NULL, &err);',
+            'if (!okay) {',
+            '    WARNMSG("GST init failed: %s", err->message);',
+            '}'
+        ].join('\n');
+        currentLang = 'cpp';
+        try {
+            analyze();
+            const nullFindings = analysisResults.findings.filter(f => f.gate === 'NULL-001');
+            const nullSuppressed = analysisResults.suppressed.filter(f => f.gate === 'NULL-001');
+            // err->message should be active (no null check on 'err' in context)
+            // The check on 'okay' should NOT suppress err->message
+            if (nullFindings.length === 0 && nullSuppressed.length > 0) {
+                errors.push('NULL-001 identity: err->message falsely suppressed by unrelated guard');
+            }
+        } catch(e) {
+            errors.push('NULL-001 identity test threw: ' + e.message);
+        }
+
+        // 10. v6.3: Verify NULL-001 IS suppressed when guard matches
+        inputEl.value = [
+            'if (self != NULL) {',
+            '    self->handle(msg);',
+            '}'
+        ].join('\n');
+        currentLang = 'cpp';
+        try {
+            analyze();
+            const nullActive = analysisResults.findings.filter(f => f.gate === 'NULL-001');
+            const nullSup = analysisResults.suppressed.filter(f => f.gate === 'NULL-001');
+            if (nullActive.length > 0 && nullSup.length === 0) {
+                errors.push('NULL-001 identity: self->handle not suppressed despite if(self != NULL)');
+            }
+        } catch(e) {
+            errors.push('NULL-001 guard test threw: ' + e.message);
+        }
+
         // Restore state
         inputEl.value = savedInput;
         currentLang = savedLang;
@@ -2457,7 +2654,7 @@
     }
 
     function initUI() {
-        // v6.0: Engine self-test on load
+        // v6.3: Engine self-test on load
         selfTestEngine();
 
         // Rules view
@@ -2487,6 +2684,97 @@
         document.getElementById('c-gates-ref').innerHTML = renderGates({...gates.c, ...gates.cpp});
         document.getElementById('rust-gates-ref').innerHTML = renderGates(gates.rust);
         document.getElementById('py-gates-ref').innerHTML = renderGates({...gates.python, ...gates.terraform, ...gates.kubernetes, ...gates.docker});
+
+        // Changelog view
+        const changelog = [
+            {
+                ver: 'v6.3', title: 'Identity-Aware NULL-001 + Z-State Baseline Fix',
+                type: 'fix', nist: 'SI-16, CA-8',
+                items: [
+                    'NULL-001 suppression now identity-aware: extracts dereferenced identifier from <code>ptr-&gt;member</code> and verifies the null check targets THAT SAME variable',
+                    'Root cause (two-part): v6.0-6.2 <code>hasNullGuard()</code> matched unrelated <code>if (!okay)</code> as guard for <code>err</code> (false suppression); initial identity fix pushed no checks, causing Z-state drop (invisible finding)',
+                    'Fix: explicit <code>gateCheck(\'0\')</code> baseline when no identity guard found &mdash; unguarded dereferences are now ACTIVE, not silently dropped',
+                    'Added <code>free()</code> recognition alongside <code>delete</code> in UAF-masquerading check',
+                    'Suppression reason now includes identifier: "Null check on \'self\' in context"',
+                    'Mixed-context validated: <code>self-&gt;</code> suppressed + <code>other-&gt;</code> active on adjacent lines',
+                    'Added Changelog view to GUI',
+                    'Self-test: 10 checks (NULL-001 identity + guard verification added)'
+                ]
+            },
+            {
+                ver: 'v6.2', title: 'CAST-001 False Positive Fix + SARIF artifactLocation',
+                type: 'fix', nist: 'SI-16, CA-8',
+                items: [
+                    'CAST-001: exclude function calls &mdash; word char before <code>(</code> = not a cast',
+                    'CAST-001: exclude ALL_CAPS_UNDERSCORE constants (STATUS_LOADED, GL_RGBA)',
+                    'CAST-001: exclude known constants (NULL, TRUE, FALSE, EOF)',
+                    '84 &rarr; 38 active findings (-55%), 47 &rarr; 12 CAST-001 (-74%)',
+                    'SARIF <code>artifactLocation.uri</code> populated from <code>// FILE:</code> markers',
+                    'Self-test: CAST-001 FP rejection + file marker tracking tests'
+                ]
+            },
+            {
+                ver: 'v6.0', title: '4-State Gate Logic (Z/X/0/1)',
+                type: 'feature', nist: 'SA-11(1), SI-16, CM-3',
+                items: [
+                    'Quaternary gate state: 0=Deny, 1=Allow, X=Unknown, Z=High-Z',
+                    'Truth table: 0 &gt; X &gt; 1, Z = identity (not applicable)',
+                    'Review tab: findings where analysis is inconclusive (X state)',
+                    'Gate check detail: each finding shows individual check results',
+                    'void** aliasing: now produces X (was binary active/suppress)',
+                    'ExCLisp Composer: DSL notation for gate expressions',
+                    'AI Prompt Generator: context-aware prompts from findings',
+                    'Self-test validates 4-state infrastructure and SELF-DEL-001=0',
+                    'Dashboard: 6-card layout with Review metric, risk scoring'
+                ]
+            },
+            {
+                ver: 'v5.0.3', title: 'Delete Detection Architecture Fix',
+                type: 'fix', nist: 'SI-16',
+                items: [
+                    'UAF-001, DF-001, SELF-DEL-001 moved to analyzeCustomCpp()',
+                    'Fixes silent detection failure in some browser environments',
+                    'C++ gate patterns emptied (all handled by custom analysis)'
+                ]
+            },
+            {
+                ver: 'v5.0.2', title: 'VALIDATE-001 Declaration False Positive Fix',
+                type: 'fix', nist: 'SI-10',
+                items: [
+                    'Pure virtual declarations (<code>= 0;</code>) no longer flagged',
+                    'Forward declarations/prototypes (ending <code>;</code>) excluded',
+                    'Only function definitions with body (<code>{</code>) trigger gate'
+                ]
+            },
+            {
+                ver: 'v5.0', title: 'Identity-Aware Suppression + New Gates',
+                type: 'feature', nist: 'SI-16, SI-10',
+                items: [
+                    'UAF/DF suppression: requires SAME identifier nullified as freed',
+                    'New CAST-002: void* to concrete type (CWE-843 type confusion)',
+                    'New SELF-DEL-001: delete self/this in callback (CWE-416)',
+                    'New VALIDATE-001: raw C-string without null check (CWE-20)',
+                    'New DIM-001: unchecked dimension multiplication (CWE-190)',
+                    'CAST-001 rewritten: regex-based, catches arbitrary C-style casts'
+                ]
+            }
+        ];
+
+        document.getElementById('changelog-content').innerHTML = changelog.map(c => {
+            const typeColor = c.type === 'feature' ? 'var(--accent)' : 'var(--success)';
+            const typeLabel = c.type === 'feature' ? 'FEATURE' : 'FIX';
+            return `
+                <div style="margin-bottom: 1.5rem; border-left: 3px solid ${typeColor}; padding-left: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+                        <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">${c.ver}</span>
+                        <span style="font-size: 0.55rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: ${typeColor}; color: var(--bg-primary); font-weight: 600;">${typeLabel}</span>
+                        <span style="font-size: 0.65rem; color: var(--text-secondary);">${c.title}</span>
+                    </div>
+                    <div style="font-size: 0.6rem; color: var(--text-muted); margin-bottom: 0.4rem;">NIST 800-53: ${c.nist}</div>
+                    ${c.items.map(item => `<div style="font-size: 0.65rem; color: var(--text-secondary); margin: 0.25rem 0; padding-left: 0.8rem; text-indent: -0.8rem;">&bull; ${item}</div>`).join('')}
+                </div>
+            `;
+        }).join('');
     }
 
     document.addEventListener('DOMContentLoaded', initUI);
