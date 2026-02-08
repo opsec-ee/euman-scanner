@@ -1,5 +1,5 @@
 # euman-scanner
-Static analysis tool for C and Python that maps findings to CVE/CWE identifiers and NIST 800-53 controls.
+Static analysis tool for C,C++ RUST and Python that maps findings to CVE/CWE identifiers and NIST 800-53 controls.
 
 
 What it does:
