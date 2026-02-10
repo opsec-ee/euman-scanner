@@ -4,7 +4,7 @@ Static analysis tool for C,C++ RUST and Python that maps findings to CVE/CWE ide
 
 What it does:
 
-Analyzes C code for memory safety issues (use-after-free, buffer overflow, null dereference, integer overflow)
+Analyzes chosn code for memory safety issues (use-after-free, buffer overflow, null dereference, integer overflow)
 Analyzes Python for injection, deserialization, and cryptography weaknesses
 Detects safe idioms to reduce false positives
 Generates remediation prompts in ExcLisp DSL format
