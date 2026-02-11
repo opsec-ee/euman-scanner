@@ -12,6 +12,8 @@ Includes gate reference and NIST control mapping
 
 Single HTML file. Runs entirely in your browser. No data is transmitted anywhere - paste your code, analyze locally, close the tab. No accounts, no tracking, no server.
 
+THIS TOOL HAS BEEN TAKEN DOWN BY: opsec.ee@pm.me until requested by Mitre, DHS or Cisa.
+
 https://htmlpreview.github.io/?https://github.com/opsec-ee/euman-scanner/blob/main/index.html
 
 this simple algorithm is where th magic lies:
