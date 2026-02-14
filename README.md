@@ -1,1 +1,1 @@
-https://github.com/opsec-ee/euman-scanner/blob/44d6b1683c093c7f8dc51a1af75c773122699600/security_gate_pattern_sl_viewer.pdf
+https://github.com/opsec-ee/euman-scanner/blob/9978335a945ae68d0cc33a5c474cf282baad420a/Security_Gate_Formal_Methods.pdf
