@@ -268,7 +268,7 @@
   <div class="subtitle">Mathematical Foundations for CVE-Surface Reduction</div>
   <div class="meta">
     Author: Euman Engineer<br>
-    Contact: <a href="mailto:opsec.ee@pm.me">opsec.ee@pm.me</a><br>
+    Contact: <a href="/cdn-cgi/l/email-protection#a2cdd2d1c7c18cc7c7e2d2cf8ccfc7"><span class="__cf_email__" data-cfemail="f09f80839593de9595b0809dde9d95">[email&#160;protected]</span></a><br>
     February 2025<br>
     License: CC BY-NC 4.0 — <a href="https://github.com/opsec-ee/euman-scanner/blob/main/LICENSE">https://github.com/opsec-ee/euman-scanner/blob/main/LICENSE</a>
   </div>
@@ -466,18 +466,41 @@ mut(r, t) = true iff r is mutated at time t</code></div>
 
 <h3>Window Contraction Theorem</h3>
 
-<div class="math-block"><code>P(race) ∝ |W(c, u)| × f_mut(r)
+<p>Let <span class="m">n</span> be the number of interleaving points in window <span class="m">W(c, u)</span> and let <span class="m">f_mut(r)</span> be the per-step probability of mutation on resource <span class="m">r</span> by any thread <span class="m">θⱼ (j ≠ i)</span>.</p>
 
-  |W(c, u)| = t_u − t_c           window width in cycles
-  f_mut(r)  = mutations/cycle      mutation frequency</code></div>
+<div class="theorem">
+  <div class="label">Window Contraction Theorem</div>
+  <p>The probability of a TOCTOU violation on resource <span class="m">r</span> over window <span class="m">W(c, u)</span> is bounded by:</p>
+</div>
 
-<p>To minimize <span class="m">P(race)</span>:</p>
+<div class="math-block"><code>P(race) = 1 − (1 − f_mut(r))ⁿ
 
-<div class="math-block"><code>Strategy 1:  Minimize |W|            check immediately before use
-Strategy 2:  Lock r during W         mutex eliminates f_mut
-Strategy 3:  REAR verification       detect post-hoc</code></div>
+where n = |W(c, u)| = t_u − t_c     interleaving points in window</code></div>
 
-<p>The REAR sidecar implements Strategy 3: <span class="m">REAR asserts val(r, t_c) = val(r, t_u)</span>. If violated, RACE-001 fires retroactively.</p>
+<p>For small <span class="m">f_mut(r)</span>, the first-order approximation gives the linear bound:</p>
+
+<div class="math-block"><code>P(race) ≈ n × f_mut(r)    when f_mut(r) ≪ 1</code></div>
+
+<div class="proof">
+  <p><span class="tag">Proof.</span> At each interleaving point <span class="m">t ∈ W(c, u)</span>, the probability that no mutation occurs is <span class="m">(1 − f_mut(r))</span>. The <span class="m">n</span> points are independent scheduling decisions. Therefore <span class="m">P(safe) = (1 − f_mut(r))ⁿ</span> and <span class="m">P(race) = 1 − P(safe) = 1 − (1 − f_mut(r))ⁿ</span>. By Bernoulli's inequality, for <span class="m">f_mut(r) ≪ 1</span>: <span class="m">(1 − f_mut(r))ⁿ ≈ 1 − n × f_mut(r)</span>, yielding the linear bound. <span class="qed">∎</span></p>
+</div>
+
+<p><strong>Corollary.</strong> <span class="m">P(race)</span> is monotonically increasing in both <span class="m">n</span> and <span class="m">f_mut(r)</span>. Reducing either reduces vulnerability exposure.</p>
+
+<p>Mitigation strategies follow directly:</p>
+
+<div class="math-block"><code>Strategy 1:  Minimize n              contract W by checking immediately before use
+             n → 1  ⟹  P(race) → f_mut(r)
+
+Strategy 2:  Eliminate f_mut         hold mutex on r during W
+             f_mut → 0  ⟹  P(race) → 0
+
+Strategy 3:  REAR verification       detect violations post-hoc
+             does not reduce P(race), but guarantees detection:
+             REAR asserts val(r, t_c) = val(r, t_u)
+             violation ⟹ RACE-001 fires retroactively</code></div>
+
+<p>Strategies 1 and 2 reduce <span class="m">P(race)</span> directly. Strategy 3 accepts the race window but guarantees no undetected exploitation — the REAR sidecar provides the completeness bound.</p>
 
 <h3>Interleaving Semantics</h3>
 
@@ -678,10 +701,4 @@ REAR   →  Does not currently exist          result = verify(s, s′)</code></d
 </div>
 
 <footer class="page-footer">
-  © 2025 Euman Engineer · CC BY-NC 4.0 · <a href="https://github.com/opsec-ee/euman-scanner/blob/main/LICENSE">License</a>
-</footer>
-
-</div>
-</body>
-</html>
-
+  © 2025 Euman Engineer · CC BY-N
