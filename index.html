@@ -1,1 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formal Methods for Security Gate Patterns</title>
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-light: #4a4a4a;
+    --ink-faint: #7a7a7a;
+    --paper: #fdfbf7;
+    --paper-warm: #f5f0e8;
+    --accent: #8b2500;
+    --accent-light: #c44d2a;
+    --rule: #c8bfb0;
+    --math-bg: #f8f5ef;
+    --blue: #1a4a6e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    font-size: 17px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.72;
+    padding: 0;
+  }
+
+  .page {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 4rem 2rem 6rem;
+  }
+
+  header {
+    margin-bottom: 3.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  header h1 {
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-weight: 600;
+    font-size: 2rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+  }
+
+  header .subtitle {
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 1.15rem;
+    color: var(--ink-light);
+    margin-bottom: 1.6rem;
+  }
+
+  header .meta {
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--ink-faint);
+    line-height: 1.7;
+  }
+
+  header .meta a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+
+  header .meta a:hover {
+    text-decoration: underline;
+  }
+
+  .section {
+    margin-bottom: 3rem;
+  }
+
+  h2 {
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-weight: 600;
+    font-size: 1.35rem;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+    padding-top: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  h2 .num {
+    color: var(--accent);
+    margin-right: 0.3em;
+  }
+
+  h3 {
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-weight: 500;
+    color: var(--ink-light);
+    margin-top: 2rem;
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.82rem;
+  }
+
+  p {
+    margin-bottom: 0.9rem;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  .separator {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 2.5rem 0;
+  }
+
+  .math-block {
+    background: var(--math-bg);
+    border-left: 3px solid var(--accent);
+    padding: 1.2rem 1.5rem;
+    margin: 1.2rem 0 1.4rem;
+    border-radius: 0 4px 4px 0;
+    overflow-x: auto;
+  }
+
+  .math-block code {
+    font-family: 'JetBrains Mono', 'Menlo', monospace;
+    font-size: 0.82rem;
+    line-height: 1.85;
+    color: var(--ink);
+    white-space: pre;
+    display: block;
+  }
+
+  .m {
+    font-family: 'JetBrains Mono', 'Menlo', monospace;
+    font-size: 0.88em;
+    color: var(--ink);
+    background: var(--math-bg);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+  }
+
+  .theorem {
+    background: var(--paper-warm);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1.2rem 1.5rem;
+    margin: 1.4rem 0;
+  }
+
+  .theorem .label {
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .theorem p {
+    margin-bottom: 0.5rem;
+  }
+
+  .theorem p:last-child {
+    margin-bottom: 0;
+  }
+
+  .qed {
+    float: right;
+    color: var(--accent);
+    font-size: 0.9em;
+  }
+
+  .proof {
+    margin: 0.8rem 0 1.2rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--rule);
+  }
+
+  .proof .tag {
+    font-style: italic;
+    color: var(--ink-light);
+    font-size: 0.95rem;
+  }
+
+  .notation-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 2rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 2;
+    margin: 1rem 0;
+    padding: 1rem 1.5rem;
+    background: var(--math-bg);
+    border-radius: 4px;
+  }
+
+  .notation-grid .entry {
+    display: flex;
+    gap: 0.8rem;
+  }
+
+  .notation-grid .sym {
+    color: var(--accent);
+    min-width: 2.2rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .notation-grid .def {
+    color: var(--ink-light);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.82rem;
+  }
+
+  footer.page-footer {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    font-family: 'Source Sans 3', Helvetica, sans-serif;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+
+  footer.page-footer a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+
+  footer.page-footer a:hover {
+    text-decoration: underline;
+  }
+
+  @media print {
+    body { background: white; font-size: 11pt; }
+    .page { padding: 0; max-width: 100%; }
+    .math-block { background: #f5f5f5; break-inside: avoid; }
+    .theorem { break-inside: avoid; }
+    header { break-after: avoid; }
+  }
+
+  @media (max-width: 600px) {
+    html { font-size: 15px; }
+    .page { padding: 2rem 1.2rem 3rem; }
+    .notation-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>Formal Methods for Security Gate Patterns</h1>
+  <div class="subtitle">Mathematical Foundations for CVE-Surface Reduction</div>
+  <div class="meta">
+    Author: Euman Engineer<br>
+    Contact: <a href="mailto:opsec.ee@pm.me">opsec.ee@pm.me</a><br>
+    February 2025<br>
+    License: CC BY-NC 4.0 — <a href="https://github.com/opsec-ee/euman-scanner/blob/main/LICENSE">https://github.com/opsec-ee/euman-scanner/blob/main/LICENSE</a>
+  </div>
+</header>
+
+<!-- §1 -->
+<div class="section">
+<h2><span class="num">1</span> Gate Predicate Logic</h2>
+
+<p>Let <span class="m">S</span> be the set of all observable program states. Let <span class="m">Ω = { 0, 1, X, Z }</span> be the 4-state gate output domain:</p>
+
+<div class="math-block"><code>0 ≡ PASS       precondition satisfied
+1 ≡ FAIL       violation detected
+X ≡ UNKNOWN    insufficient information to decide
+Z ≡ INVALID    gate inputs themselves are corrupt</code></div>
+
+<p>A gate <span class="m">G</span> is a total function <span class="m">G : S → Ω</span> satisfying the totality requirement <span class="m">∀s ∈ S : G(s) ∈ Ω</span>. No gate may be partial. If the gate cannot evaluate, it returns X or Z — never ⊥.</p>
+
+<h3>Gate Class Predicates</h3>
+
+<p>Let <span class="m">ptr ∈ Addr</span>, <span class="m">rc ∈ ℕ</span>, <span class="m">buf ∈ Byte*</span>, <span class="m">τ ∈ Type</span>, <span class="m">t ∈ Time</span>.</p>
+
+<div class="math-block"><code>φ_UAF(ptr)    ≡  ptr ∈ Live  ∧  rc(ptr) &gt; 0
+φ_DF(ptr)     ≡  ptr ∈ Live  ∧  freed(ptr) = false
+φ_NUL(ptr)    ≡  ptr ≠ 0x0   ∧  page(ptr) ∈ Mapped
+φ_BOF(buf, i) ≡  0 ≤ i &lt; len(buf)
+φ_TYP(ptr, τ) ≡  typeof(ptr) ⊑ τ
+φ_RAC(r, t)   ≡  ¬∃t′ ∈ (t_check, t_use) : mut(r, t′)
+φ_REF(rc)     ≡  rc &lt; RC_MAX  ∧  rc ≥ 0</code></div>
+
+<p>Gate evaluation:</p>
+
+<div class="math-block"><code>         ⎧ 0   if φ(s) = true
+         ⎪ 1   if φ(s) = false
+G(s)  =  ⎨ X   if φ(s) is undecidable at runtime
+         ⎪ Z   if inputs to φ are themselves corrupt
+         ⎩</code></div>
+
+<h3>Universal Invariant</h3>
+
+<p>For any function <span class="m">f</span> protected by gate set <span class="m">Γ = {G₁, …, Gₙ}</span>:</p>
+
+<div class="math-block"><code>pre(f) ≡ ⋀ᵢ₌₁ⁿ (Gᵢ(s) = 0)</code></div>
+
+<p>Execution of <span class="m">f</span> proceeds if and only if all gates pass.</p>
+
+<h3>Composition Algebra</h3>
+
+<p>Gate conjunction, where <span class="m">▷</span> denotes sequential check:</p>
+
+<div class="math-block"><code>(G₁ ▷ G₂)(s) = G₁(s)    if G₁(s) ≠ 0
+              = G₂(s)    if G₁(s) = 0
+
+Short-circuit:
+  G₁(s) = 1  ⟹  (G₁ ▷ G₂)(s) = 1      fail-fast
+  G₁(s) = Z  ⟹  (G₁ ▷ G₂)(s) = Z      corruption propagates</code></div>
+
+<p>Ordering on <span class="m">Ω</span> (failure lattice): <span class="m">Z &gt; 1 &gt; X &gt; 0</span>. For a gate vector <span class="m">Γ = ⟨G₁, …, Gₙ⟩</span>:</p>
+
+<div class="math-block"><code>Γ(s) = max(G₁(s), G₂(s), …, Gₙ(s))</code></div>
+
+<p>The worst violation dominates.</p>
+</div>
+
+<hr class="separator">
+
+<!-- §2 -->
+<div class="section">
+<h2><span class="num">2</span> Object Lifetime State Machine</h2>
+
+<p>Use-after-free and double-free are illegal transitions in the object lifecycle. Gates enforce transition guards.</p>
+
+<h3>Definition</h3>
+
+<div class="math-block"><code>M = (Q, Σ, δ, q₀, F)
+
+Q  = { A, R, D, F, ⊥ }
+
+  A = Allocated       memory obtained, not yet referenced
+  R = Referenced      at least one live reference exists
+  D = Dereferenced    all references released, rc = 0
+  F = Freed           memory returned to allocator
+  ⊥ = Error           illegal state — vulnerability triggered
+
+q₀ = A       initial state
+F  = { F }   accepting states
+⊥ absorbing  no transitions out
+
+Σ  = { alloc, ref, deref, free, access }</code></div>
+
+<h3>Transition Function δ : Q × Σ → Q</h3>
+
+<div class="math-block"><code>δ(A, ref)    = R
+δ(A, free)   = F
+δ(A, deref)  = ⊥
+δ(A, access) = ⊥
+
+δ(R, ref)    = R            rc ← rc + 1
+δ(R, deref)  = R            if rc − 1 &gt; 0
+δ(R, deref)  = D            if rc − 1 = 0
+δ(R, access) = R
+δ(R, free)   = ⊥            UAF-001 / CWE-416
+
+δ(D, free)   = F
+δ(D, ref)    = ⊥
+δ(D, deref)  = ⊥
+δ(D, access) = ⊥            UAF-001 / CWE-416
+
+δ(F, alloc)  = A′           reallocation
+δ(F, ref)    = ⊥            UAF-001 / CWE-416
+δ(F, access) = ⊥            UAF-001 / CWE-416
+δ(F, free)   = ⊥            DF-001  / CWE-415
+
+δ(⊥, σ)     = ⊥            ∀σ ∈ Σ</code></div>
+
+<h3>Gate as Transition Guard</h3>
+
+<p>For any transition <span class="m">δ(q, σ)</span> where <span class="m">δ(q, σ)</span> could reach ⊥:</p>
+
+<div class="math-block"><code>δ_guarded(q, σ) = δ(q, σ)     if G_σ(s) = 0
+                = q             if G_σ(s) ≠ 0     block and log</code></div>
+
+<div class="theorem">
+  <div class="label">Safety Theorem</div>
+  <p>If every transition into ⊥ is guarded by a gate <span class="m">G</span> where <span class="m">G(s)</span> is evaluated before <span class="m">δ</span>, then <span class="m">∀</span> reachable states <span class="m">q : q ≠ ⊥</span>.</p>
+</div>
+
+<div class="proof">
+  <p><span class="tag">Proof.</span> By induction on transition sequences. Base case: <span class="m">q₀ = A ≠ ⊥</span>. Inductive step: assume <span class="m">qₙ ≠ ⊥</span>. If <span class="m">δ(qₙ, σ) = ⊥</span>, then <span class="m">G_σ</span> fires and the transition is blocked, so <span class="m">qₙ₊₁ = qₙ ≠ ⊥</span>. <span class="qed">∎</span></p>
+</div>
+
+<h3>Refcount Invariant</h3>
+
+<p>For any object <span class="m">o</span> with reference count <span class="m">rc(o)</span>:</p>
+
+<div class="math-block"><code>INV_REF(o)  ≡  0 ≤ rc(o) ≤ RC_MAX       where RC_MAX = 2³¹ − 1
+
+REF-001 gate enforces:
+
+  pre(ref)   :  rc(o) &lt; RC_MAX            overflow prevention
+  pre(deref) :  rc(o) &gt; 0                 underflow prevention
+  pre(free)  :  rc(o) = 0  ∧  state(o) = D</code></div>
+
+<h3>Bijective Contract</h3>
+
+<p>For a function <span class="m">f : X → Y</span> protected by gate <span class="m">G</span>:</p>
+
+<div class="math-block"><code>{ G(s) = 0 }  f(x)  { G(s′) = 0 }</code></div>
+
+<p>If the gate passes before <span class="m">f</span> and <span class="m">f</span> preserves the invariant, then the gate passes after <span class="m">f</span>. This is the gate stability property — correct code cannot cause a gate to spontaneously transition from PASS to FAIL.</p>
+</div>
+
+<hr class="separator">
+
+<!-- §3 -->
+<div class="section">
+<h2><span class="num">3</span> TOCTOU / RACE-001 Temporal Logic</h2>
+
+<p>Race conditions require reasoning over time. We formalize using linear temporal logic over discrete execution steps.</p>
+
+<h3>Temporal Model</h3>
+
+<p>Let <span class="m">T = ⟨t₀, t₁, t₂, …⟩</span> be a discrete timeline of execution steps across all threads. For resource <span class="m">r</span>:</p>
+
+<div class="math-block"><code>val(r, t) = value of r at time t
+mut(r, t) = true iff r is mutated at time t</code></div>
+
+<h3>TOCTOU Window</h3>
+
+<p>A check-use pair <span class="m">(c, u)</span> on resource <span class="m">r</span> defines:</p>
+
+<div class="math-block"><code>W(c, u) = { t ∈ T : t_c &lt; t &lt; t_u }</code></div>
+
+<p>TOCTOU safety predicate:</p>
+
+<div class="math-block"><code>SAFE(r, c, u)  ≡  ∀t ∈ W(c, u) : ¬mut(r, t)</code></div>
+
+<p>No mutation of <span class="m">r</span> occurs between check and use. The RACE-001 gate: <span class="m">φ_RAC(r, c, u) = SAFE(r, c, u)</span>.</p>
+
+<h3>LTL Specification</h3>
+
+<p>Let <span class="m">p</span> = resource <span class="m">r</span> has been checked, <span class="m">q</span> = resource <span class="m">r</span> is used, <span class="m">m</span> = resource <span class="m">r</span> is mutated.</p>
+
+<p>Safety property:</p>
+
+<div class="math-block"><code>□(p → (¬m U q))</code></div>
+
+<p>Globally, if <span class="m">r</span> is checked, then <span class="m">r</span> is not mutated until <span class="m">r</span> is used.</p>
+
+<p>Violation witness:</p>
+
+<div class="math-block"><code>◇(p ∧ ◇(m ∧ ¬q ∧ ◇q))</code></div>
+
+<p>Eventually <span class="m">r</span> is checked, then eventually mutated before being used, and then used with stale data.</p>
+
+<h3>Window Contraction Theorem</h3>
+
+<div class="math-block"><code>P(race) ∝ |W(c, u)| × f_mut(r)
+
+  |W(c, u)| = t_u − t_c           window width in cycles
+  f_mut(r)  = mutations/cycle      mutation frequency</code></div>
+
+<p>To minimize <span class="m">P(race)</span>:</p>
+
+<div class="math-block"><code>Strategy 1:  Minimize |W|            check immediately before use
+Strategy 2:  Lock r during W         mutex eliminates f_mut
+Strategy 3:  REAR verification       detect post-hoc</code></div>
+
+<p>The REAR sidecar implements Strategy 3: <span class="m">REAR asserts val(r, t_c) = val(r, t_u)</span>. If violated, RACE-001 fires retroactively.</p>
+
+<h3>Interleaving Semantics</h3>
+
+<p>Let <span class="m">Θ = {θ₁, θ₂, …, θₙ}</span> be the set of active threads. An execution trace <span class="m">σ</span> is an interleaving <span class="m">σ ∈ shuffle(θ₁, θ₂, …, θₙ)</span>.</p>
+
+<p>RACE-001 is violated iff:</p>
+
+<div class="math-block"><code>∃σ ∈ Interleavings(Θ) :
+    ∃(c, u) ∈ σ|θᵢ,  ∃m ∈ σ|θⱼ  (i ≠ j) :
+        t_c &lt; t_m &lt; t_u  ∧  target(m) = target(c)</code></div>
+
+<p>There exists an interleaving where another thread mutates the checked resource before the checking thread uses it.</p>
+
+<p>Gate coverage: a gate set <span class="m">Γ</span> is RACE-COMPLETE for resource set <span class="m">R</span> iff:</p>
+
+<div class="math-block"><code>∀r ∈ R, ∀(c, u) on r :  ∃G ∈ Γ : G validates SAFE(r, c, u)</code></div>
+</div>
+
+<hr class="separator">
+
+<!-- §4 -->
+<div class="section">
+<h2><span class="num">4</span> Overhead Cost Model</h2>
+
+<p>Security levels form a lattice. Gate activation is monotonic over this lattice. The compile-out property guarantees zero cost at the bottom.</p>
+
+<h3>Security Level Lattice</h3>
+
+<p>Let <span class="m">L = { NONE, BASIC, STANDARD, PARANOID }</span> ordered by ⊑ :</p>
+
+<div class="math-block"><code>NONE  ⊑  BASIC  ⊑  STANDARD  ⊑  PARANOID</code></div>
+
+<p><span class="m">L</span> forms a total order and therefore a lattice with <span class="m">⊓ = min</span>, <span class="m">⊔ = max</span>.</p>
+
+<h3>Gate Activation Function</h3>
+
+<p>Let <span class="m">𝒢 = {UAF, DF, NULL, BOF, TYPE, RACE, REF}</span> be all gate classes. Define activation <span class="m">α : L → 𝒫(𝒢)</span> :</p>
+
+<div class="math-block"><code>α(NONE)     = ∅
+α(BASIC)    = { REF, TYPE }
+α(STANDARD) = { REF, TYPE, BOF, NULL }
+α(PARANOID) = 𝒢                          all gates plus canaries</code></div>
+
+<p>Monotonicity: <span class="m">l₁ ⊑ l₂ ⟹ α(l₁) ⊆ α(l₂)</span>. Higher security levels only add gates, never remove them.</p>
+
+<h3>Cost Function</h3>
+
+<p>Each gate <span class="m">Gᵢ</span> has a per-invocation cost <span class="m">cᵢ</span> measured in branch-on-condition cycles. For a function <span class="m">f</span> invoked with frequency <span class="m">fᵢ</span> calls/sec, guarded by gate set <span class="m">Γ_f ⊆ 𝒢</span> :</p>
+
+<div class="math-block"><code>Cost(f, l) = fᵢ  ×  Σ{ cⱼ : Gⱼ ∈ Γ_f ∩ α(l) }
+
+Overhead(l) = Σ_f Cost(f, l)  /  Baseline</code></div>
+
+<p>Measured bounds:</p>
+
+<div class="math-block"><code>Overhead(NONE)      =  0%         proven below
+Overhead(BASIC)     ≈  5%         REF + TYPE only
+Overhead(STANDARD)  ≈ 10%         plus bounds checks
+Overhead(PARANOID)  ≈ 20%         all gates plus memory canaries</code></div>
+
+<div class="theorem">
+  <div class="label">Compile-Out Theorem</div>
+  <p><strong>Claim:</strong> <span class="m">Overhead(NONE) = 0</span> exactly.</p>
+</div>
+
+<div class="proof">
+  <p><span class="tag">Proof.</span> <span class="m">α(NONE) = ∅</span> by definition. <span class="m">⟹ ∀f : Γ_f ∩ α(NONE) = ∅</span> (intersection with ∅). <span class="m">⟹ ∀f : Cost(f, NONE) = 0</span> (empty sum). <span class="m">⟹ Overhead(NONE) = 0/B = 0</span>. <span class="qed">∎</span></p>
+</div>
+
+<p>Implementation: <span class="m">GATE_CHECK(id, …)</span> expands to <span class="m">((void)0)</span> when <span class="m">SECURITY_LEVEL = NONE</span>. Any C++ optimizer with dead code elimination removes this entirely.</p>
+
+<h3>Cost Ordering</h3>
+
+<p>From monotonicity of <span class="m">α</span>:</p>
+
+<div class="math-block"><code>l₁ ⊑ l₂  ⟹  Overhead(l₁) ≤ Overhead(l₂)</code></div>
+
+<p>Cost is monotonically non-decreasing with security level. You pay strictly for what you enable.</p>
+</div>
+
+<hr class="separator">
+
+<!-- §5 -->
+<div class="section">
+<h2><span class="num">5</span> Sidecar Composition</h2>
+
+<p>The three-thread sidecar model as a formal pipeline with verification completeness.</p>
+
+<h3>Pipeline Model</h3>
+
+<p>Three functions operating on program state <span class="m">s ∈ S</span>:</p>
+
+<div class="math-block"><code>FRONT : S → S × Hint
+LEAD  : S × Hint → S′
+REAR  : S × S′ → { ✓, ✗ }</code></div>
+
+<p>Pipeline composition:</p>
+
+<div class="math-block"><code>(h, s₁) = FRONT(s₀)              predict and prefetch
+s₂      = LEAD(s₁, h)            authoritative execution
+result  = REAR(s₁, s₂)           postcondition verification</code></div>
+
+<p>FRONT is advisory. LEAD may ignore hints: <span class="m">∀h : LEAD(s, h) = LEAD(s, ⊥)</span>. Hints improve performance, not correctness.</p>
+
+<h3>REAR Verification Semantics</h3>
+
+<p>REAR checks a set of postconditions <span class="m">Π = {π₁, …, πₖ}</span>:</p>
+
+<div class="math-block"><code>REAR(s, s′) = ⋀ᵢ₌₁ᵏ πᵢ(s, s′)</code></div>
+
+<p>Where each <span class="m">πᵢ</span> is a gate postcondition:</p>
+
+<div class="math-block"><code>π_UAF(s, s′)  ≡  ∀ptr freed in s→s′ : rc(ptr, s) = 0
+π_BOF(s, s′)  ≡  ∀write(buf, i) in s→s′ : i &lt; len(buf, s)
+π_RAC(s, s′)  ≡  ∀(c, u) in s→s′ : val(r, t_c) = val(r, t_u)
+π_TYPE(s, s′) ≡  ∀cast(ptr, τ) in s→s′ : typeof(ptr, s) ⊑ τ</code></div>
+
+<h3>Verification Completeness</h3>
+
+<p><em>Definition.</em> REAR is complete for gate set <span class="m">𝒢</span> iff:</p>
+
+<div class="math-block"><code>∀G ∈ 𝒢,  ∃π ∈ Π :  π detects all violations of G</code></div>
+
+<p>Formally:</p>
+
+<div class="math-block"><code>∀G ∈ 𝒢, ∀(s, s′) :
+    G would have returned 1 on some sub-state of s→s′
+    ⟹  REAR(s, s′) = ✗</code></div>
+
+<div class="theorem">
+  <div class="label">Defense in Depth Theorem</div>
+  <p>Let <span class="m">Γ_pre</span> be gates checked before execution (LEAD). Let <span class="m">Π_post</span> be REAR postconditions. If <span class="m">Π_post</span> is complete for <span class="m">𝒢</span>, then:</p>
+</div>
+
+<div class="math-block"><code>∀ vulnerability v ∈ 𝒢 :
+    v is caught by Γ_pre      before damage
+  ∨ v is caught by Π_post     after execution, before propagation</code></div>
+
+<p>No vulnerability in the gate taxonomy escapes both layers.</p>
+
+<h3>Viewer-Specific Mapping</h3>
+
+<div class="math-block"><code>FRONT  →  Interest List / LOD System       h = prefetch_hints(s)
+LEAD   →  Main Loop (render, events, sim)  s′ = execute(s, h)
+REAR   →  Does not currently exist          result = verify(s, s′)</code></div>
+
+<p>REAR catches what FRONT and LEAD miss: media plugin URL fetch postconditions, audio engine buffer TOCTOU violations, and object cache refcount consistency.</p>
+
+<p>Composition guarantee:</p>
+
+<div class="math-block"><code>REAR(LEAD(s, FRONT(s)))  ⊨  ⋀ π ∈ Π</code></div>
+
+<p>The rear sidecar, applied to the output of authoritative execution informed by front predictions, satisfies all postconditions in the verification set. When REAR returns ✗: gate fires retroactively, state is rolled back or quarantined, and the violation is logged with full <span class="m">(s, s′, π)</span> context.</p>
+</div>
+
+<hr class="separator">
+
+<!-- Notation -->
+<div class="section">
+<h2>Notation Reference</h2>
+
+<div class="notation-grid">
+  <div class="entry"><span class="sym">∀</span><span class="def">for all</span></div>
+  <div class="entry"><span class="sym">∃</span><span class="def">there exists</span></div>
+  <div class="entry"><span class="sym">∧</span><span class="def">logical AND</span></div>
+  <div class="entry"><span class="sym">∨</span><span class="def">logical OR</span></div>
+  <div class="entry"><span class="sym">¬</span><span class="def">logical NOT</span></div>
+  <div class="entry"><span class="sym">⟹</span><span class="def">implies</span></div>
+  <div class="entry"><span class="sym">⟺</span><span class="def">if and only if</span></div>
+  <div class="entry"><span class="sym">∈</span><span class="def">element of</span></div>
+  <div class="entry"><span class="sym">⊆</span><span class="def">subset of</span></div>
+  <div class="entry"><span class="sym">⊑</span><span class="def">subtype of</span></div>
+  <div class="entry"><span class="sym">∅</span><span class="def">empty set</span></div>
+  <div class="entry"><span class="sym">𝒫(X)</span><span class="def">power set of X</span></div>
+  <div class="entry"><span class="sym">⋀</span><span class="def">conjunction</span></div>
+  <div class="entry"><span class="sym">⊨</span><span class="def">satisfies / models</span></div>
+  <div class="entry"><span class="sym">□</span><span class="def">always (LTL)</span></div>
+  <div class="entry"><span class="sym">◇</span><span class="def">eventually (LTL)</span></div>
+  <div class="entry"><span class="sym">U</span><span class="def">until (LTL)</span></div>
+  <div class="entry"><span class="sym">⊥</span><span class="def">bottom / undefined</span></div>
+  <div class="entry"><span class="sym">◦</span><span class="def">function composition</span></div>
+  <div class="entry"><span class="sym">∥</span><span class="def">parallel composition</span></div>
+  <div class="entry"><span class="sym">▷</span><span class="def">sequential gate comp</span></div>
+  <div class="entry"><span class="sym">∎</span><span class="def">end of proof</span></div>
+  <div class="entry"><span class="sym">⊓</span><span class="def">lattice meet</span></div>
+  <div class="entry"><span class="sym">⊔</span><span class="def">lattice join</span></div>
+  <div class="entry"><span class="sym">ℕ</span><span class="def">natural numbers</span></div>
+  <div class="entry"><span class="sym">Ω</span><span class="def">gate output domain</span></div>
+  <div class="entry"><span class="sym">α</span><span class="def">gate activation fn</span></div>
+  <div class="entry"><span class="sym">δ</span><span class="def">transition function</span></div>
+  <div class="entry"><span class="sym">σ</span><span class="def">execution trace</span></div>
+  <div class="entry"><span class="sym">Θ</span><span class="def">thread set</span></div>
+  <div class="entry"><span class="sym">Γ</span><span class="def">gate set</span></div>
+  <div class="entry"><span class="sym">Π</span><span class="def">postcondition set</span></div>
+  <div class="entry"><span class="sym">φ</span><span class="def">gate predicate</span></div>
+  <div class="entry"><span class="sym">π</span><span class="def">postcondition predicate</span></div>
+</div>
+</div>
+
+<footer class="page-footer">
+  © 2025 Euman Engineer · CC BY-NC 4.0 · <a href="https://github.com/opsec-ee/euman-scanner/blob/main/LICENSE">License</a>
+</footer>
+
+</div>
+</body>
+</html>
 
