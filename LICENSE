@@ -1,35 +1,89 @@
-License update 2.10.26 - Euman Security Scanner — Non-Commercial License
+License update 2.21.26
 
-Copyright (c) 2026 opsec.ee@pm.me. All rights reserved.
+ee_scan Proprietary License
+============================
+Copyright (c) 2025-2026 H. Overman. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"),
-to use, copy, and distribute the Software for non-commercial purposes only,
-subject to the following conditions:
 
-1. NON-COMMERCIAL USE ONLY. The Software may not be used, copied,
-   modified, merged, published, distributed, sublicensed, or sold for
-   any commercial purpose. "Commercial purpose" means any use intended
-   for or directed toward commercial advantage or monetary compensation.
+ALL USE OF THIS SOFTWARE REQUIRES A PAID LICENSE.
 
-2. ATTRIBUTION. The above copyright notice and this permission notice
-   shall be included in all copies or substantial portions of the
-   Software.
+There is no free version. There is no evaluation version.
+There is no academic version. There is no personal version.
+There is no open source version.
 
-3. NO DERIVATIVE WORKS FOR DISTRIBUTION. You may modify the Software
-   for your own non-commercial use, but you may not distribute modified
-   versions without prior written permission from the copyright holder.
+Any use, copying, modification, distribution, or access to
+this software without a valid, paid Commercial License Agreement
+is UNAUTHORIZED and constitutes copyright infringement under
+17 U.S.C. § 504, subject to statutory damages up to $150,000
+per infringed work.
 
-4. NO WARRANTY. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-   ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-   WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-   NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE
-   FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
-   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-5. TERMINATION. This license terminates automatically if you violate
-   any of its terms. Upon termination, you must destroy all copies of
-   the Software in your possession.
+1. NO RIGHTS GRANTED
 
-For commercial licensing inquiries, contact: opsec.ee@pm.me
+   This file does not grant any license, right, or permission
+   to use, copy, modify, distribute, display, or create
+   derivative works of the Software.
+
+   All rights are reserved exclusively by the copyright holder.
+
+
+2. COMMERCIAL LICENSE REQUIRED
+
+   Any use of this Software — including but not limited to
+   installation, execution, study, evaluation, testing,
+   benchmarking, integration, scanning, or any other
+   interaction — requires a valid Commercial License Agreement
+   executed with the copyright holder and payment of all
+   applicable fees.
+
+
+3. PROHIBITED WITHOUT A PAID LICENSE
+
+   Without a paid Commercial License Agreement, you may NOT:
+
+   (a) Use the Software for any purpose whatsoever
+   (b) Install or execute the Software
+   (c) Copy the Software in any form
+   (d) Distribute or redistribute the Software
+   (e) Modify, adapt, or create derivative works
+   (f) Reverse engineer, decompile, or disassemble
+   (g) Study the source code or algorithms
+   (h) Evaluate or benchmark the Software
+   (i) Use the Software for academic or research purposes
+   (j) Use the Software for personal purposes
+   (k) Use scan results or output from the Software
+   (l) Incorporate any part of the Software into another work
+
+
+4. INTELLECTUAL PROPERTY
+
+   The Software and all intellectual property therein —
+   including but not limited to the multi-axis gate
+   decomposition, 6-state formal gate logic, 3-pass
+   verification engine, MULTI-dimensional coordinate system,
+   and bitstream encoding — are the exclusive property of
+   the copyright holder.
+
+   No license, right, or interest in any patent, trademark,
+   trade secret, or copyright is granted by this notice.
+
+
+5. ENFORCEMENT
+
+   The copyright holder actively monitors for unauthorized
+   use and will pursue all available legal remedies including:
+
+   (a) Injunctive relief
+   (b) Statutory damages under 17 U.S.C. § 504
+   (c) Actual damages and profits
+   (d) Attorney's fees and court costs
+
+
+6. CONTACT
+
+   To obtain a Commercial License:
+   [INSERT CONTACT EMAIL]
+
+
+Copyright (c) 2025-2026 H. Overman. All rights reserved.
+UNAUTHORIZED USE IS A FEDERAL OFFENSE.
